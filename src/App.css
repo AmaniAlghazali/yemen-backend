@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* This is where DaisyUI belongs in v4 */
+@plugin "daisyui";
