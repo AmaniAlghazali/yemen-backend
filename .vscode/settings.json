@@ -1,0 +1,9 @@
+{
+    "workbench.view.showQuietly": {
+        "workbench.panel.output": true
+    },
+    "files.autoSave": "onWindowChange",
+    "editor.wordWrap": "on",
+    "editor.autoIndent": "full",
+    "editor.autoIndentOnPasteWithinString": false
+}
