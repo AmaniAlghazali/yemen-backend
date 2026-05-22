@@ -13,7 +13,9 @@ import {
   getAllUsers,
   combineData,
   updateUserProfile,
-  deleteUser
+  deleteUser,
+  contactController,
+  getContactMessages
 } from "../controllers/userController.js";
 import { isAuthenticatedUser } from "../util/userAuth.js";
 const userRouter = express.Router();
@@ -40,4 +42,6 @@ userRouter.get("/all-users", isAuthenticatedUser,getAllUsers)
 userRouter.get("/combine-data", isAuthenticatedUser,combineData)
 userRouter.put("/update-user/:id", isAuthenticatedUser,updateUserProfile)
 userRouter.delete("/delete-user/:id", isAuthenticatedUser,deleteUser)
+userRouter.post("/contact", contactController);
+userRouter.get("/contact-messages", isAuthenticatedUser, getContactMessages);
 export default userRouter;

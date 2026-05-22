@@ -24,12 +24,15 @@ const Profile = () => {
       }
 
       try {
-        const { data } = await axios.get("http://localhost:8000/api/v1/users/profile", {
+        const { data } = await axios.get("/api/v1/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         console.log("Full User Data from Backend:", data.user);
         if (data.success) {
           setUser(data.user);
+          if (data.user.profile?.url && data.user.profile.url !== "url") {
+            localStorage.setItem("userAvatar", data.user.profile.url);
+          }
         }
       } catch (error) {
         console.error("Profile Error:", error.response?.data?.message || error.message);
@@ -62,13 +65,10 @@ const Profile = () => {
         <div className="avatar mb-6">
           <div className="w-32 h-32 rounded-full ring ring-primary ring-offset-2">
             <img
-              // 1. Check if user.profile exists
-              // 2. Check if it has a .url
-              // 3. Fallback to Dicebear
-              src={user?.profile?.url ? user.profile.url : "https://api.dicebear.com/7.x/avataaars/svg"}
+              src={user?.profile?.url && user.profile.url !== "url" ? user.profile.url : "https://api.dicebear.com/7.x/avataaars/svg"}
               alt="Profile"
               className="object-cover"
-              onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg" }} // Fallback if URL is broken
+              onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg" }}
             />
           </div>
         </div>

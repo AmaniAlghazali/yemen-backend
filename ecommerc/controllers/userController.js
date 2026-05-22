@@ -1,6 +1,7 @@
 import User from "../models/userModel.js";
 import Product from "../models/productModel.js";
 import Order from "../models/orderModel.js";
+import ContactMessage from "../models/contactModel.js";
 import { sendToken } from "../util/jwtToken.js";
 import { sendEmail } from "../util/sendMail.js";
 import jwt from "jsonwebtoken";
@@ -67,12 +68,15 @@ export const isAdmin = (...roles) => {
 // Register User
 export const resgisterUserController = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, avatar } = req.body;
+    const profile = avatar
+      ? { public_id: "local", url: avatar }
+      : { public_id: "id", url: "url" };
     const user = await User.create({
       name,
       email,
       password,
-      profile: { public_id: "id", url: "url" },
+      profile,
     });
 
     sendToken(user, 201, res);
@@ -108,8 +112,6 @@ export const loginUserController = async (req, res) => {
     sendToken(user, 200, res);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
-    console.log("Full Error Object:", error);
-  console.log("Server Response Data:", error.response?.data);
   }
 };
 
@@ -127,9 +129,13 @@ export const getUserPhotoByEmail = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.params.email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res.status(200).json({ success: false, message: "User not found", url: null });
     }
-    res.status(200).json({ success: true, url: user.profile.url });
+    const url = user.profile?.url;
+    if (!url || url === "url") {
+      return res.status(200).json({ success: false, message: "No profile photo", url: null });
+    }
+    res.status(200).json({ success: true, url });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -321,6 +327,41 @@ export const resetPasswordController = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+export const contactController = async (req, res) => {
+  try {
+    const { name, email, subject, message, lat, lng } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ success: false, message: "Name, email, and message are required" });
+    }
+
+    const location = (lat && lng) ? { lat: Number(lat), lng: Number(lng) } : undefined;
+    await ContactMessage.create({ name, email, subject, message, location });
+
+    try {
+      await sendEmail({
+        email: process.env.SMTP_MAIL,
+        subject: `Contact Form: ${subject} - from ${name}`,
+        message: `From: ${name} (${email})\n\nSubject: ${subject}\n\nMessage:\n${message}`,
+      });
+    } catch (emailErr) {
+      console.log("Email send failed (DB saved ok):", emailErr.message);
+    }
+
+    res.status(200).json({ success: true, message: "Message sent successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getContactMessages = async (req, res) => {
+  try {
+    const messages = await ContactMessage.find().sort({ createdAt: -1 });
+    res.status(200).json({ success: true, messages });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getAllUsers = async (req,res) => {
     try {
         const users = await User.find();

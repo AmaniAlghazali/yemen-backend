@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import { useStore } from "../../context/StoreContext";
+import { formatPrice } from "../../utils/currency";
 
 // Fallback configuration if your context environment values are not initialized globally
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = "/api/v1";
 const toast = {
   success: (msg) => alert(`Success: ${msg}`),
   error: (msg) => alert(`Error: ${msg}`),
 };
 
 const ViewAllProduct = () => {
+  const { store } = useStore();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
@@ -28,11 +31,13 @@ const ViewAllProduct = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const CATEGORY_OPTIONS = [
-    "electronics",
-    "clothing",
-    "food",
-    "books",
-    "accessories",
+    "Electronics", "Clothing", "Food", "Books",
+    "Home & Kitchen", "Beauty", "Sports", "Automotive",
+    "Toys & Games", "Health", "Pet Supplies", "Office Supplies",
+    "Baby & Kids", "Jewelry", "Music", "Arts & Crafts",
+    "Garden", "Tools", "Shoes", "Bags & Luggage",
+    "Furniture", "Groceries", "Phones & Tablets",
+    "Computers & Laptops", "Cameras", "Smart Home", "Stationery",
   ];
 
   const [productFormData, setProductFormData] = useState({
@@ -350,7 +355,7 @@ const ViewAllProduct = () => {
         </nav>
 
         <div className="p-4 border-t border-base-300 bg-base-100">
-          <button className="btn btn-error btn-outline btn-sm w-full gap-2 rounded-xl">
+          <button onClick={() => navigate("/admin")} className="btn btn-error btn-outline btn-sm w-full gap-2 rounded-xl">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -438,6 +443,7 @@ const ViewAllProduct = () => {
               </h1>
             </div>
           </div>
+
 
           {/* USER PROFILE AVATAR DROPDOWN */}
           <div className="dropdown dropdown-end">
@@ -625,7 +631,7 @@ const ViewAllProduct = () => {
                           </div>
                         </td>
                         <td className="font-semibold text-base-content">
-                          ${product.price}
+                          {formatPrice(product.price, store.currency)}
                         </td>
                         <td>
                           <span
@@ -718,7 +724,7 @@ const ViewAllProduct = () => {
                 <div className="form-control">
                   <label className="label py-1">
                     <span className="label-text font-semibold text-base-content/80">
-                      Price ($)
+                      Price
                     </span>
                   </label>
                   <input

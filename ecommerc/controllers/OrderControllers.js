@@ -1,55 +1,47 @@
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
-import { uploadToCloudinary } from "../util/cloudinary.js";
+import Cart from "../models/cartModel.js";
+import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
+
 export const createOrderController = async (req, res, next) => {
   try {
-    // 1. Extract flat fields sent via FormData
     const {
-      address,
-      mobileNo,
-      city,
-      country,
-      zipCode,
-      productName,
-      productPrice,
-      quantity,
-      productId,
+      shippingInfo,
+      items,
       paymentId,
       paymentStatus,
       taxPrice,
       shippingCost,
       totalPrice,
       orderStatus,
-      fallbackImageUrl // In case no custom file is uploaded
     } = req.body;
 
-    // 2. Handle Image: Use uploaded file, or fall back to product image url
-    let finalImageUrl = fallbackImageUrl || "https://placehold.co/400";
-    if (req.file) {
-      const result = await uploadToCloudinary(req.file.path, "orders");
-      finalImageUrl = result.secure_url;
+    if (!shippingInfo || !items || !items.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing shipping info or order items",
+      });
     }
 
-    // 3. Build the structured object your Mongoose Schema expects
+    const orderItems = items.map((item) => ({
+      name: item.title || item.name,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      image: item.image || "https://placehold.co/400",
+      product: item.productId || item.product,
+    }));
+
     const orderData = {
       shippingInfo: {
-        address,
-        mobileNo: Number(mobileNo),
-        city,
-        country,
-        zipCode: Number(zipCode),
+        address: shippingInfo.address,
+        mobileNo: Number(shippingInfo.mobileNo),
+        city: shippingInfo.city,
+        country: shippingInfo.country,
+        zipCode: Number(shippingInfo.zipCode),
       },
-      orderItems: [
-        {
-          name: productName,
-          price: Number(productPrice),
-          quantity: Number(quantity),
-          image: finalImageUrl,
-          product: productId,
-        },
-      ],
+      orderItems,
       paymentInfo: {
-        id: paymentId || `pay_mock_${Date.now()}`, // fallback if empty
+        id: paymentId || `pay_mock_${Date.now()}`,
         status: paymentStatus || "succeeded",
       },
       taxPrice: Number(taxPrice) || 0,
@@ -57,11 +49,15 @@ export const createOrderController = async (req, res, next) => {
       totalPrice: Number(totalPrice) || 0,
       orderStatus: orderStatus || "Processing",
       paidAt: new Date(),
-      user: req.user._id, // Associated authenticated user
+      user: req.user._id,
     };
 
-    // 4. Save to Database
     const order = await Order.create(orderData);
+
+    await Cart.findOneAndUpdate(
+      { user: req.user._id },
+      { $set: { items: [] } }
+    );
 
     res.status(201).json({
       success: true,
@@ -239,7 +235,7 @@ export const updateOrderelement = async (req, res, next) => {
     let finalImageUrl = existingImageUrl; 
     if (req.file) {
       // Pass the temporary file path and the destination folder name ("orders")
-      const result = await uploadToCloudinary(req.file.path, "orders");
+      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "orders");
       finalImageUrl = result.secure_url; // Secure URL returned by Cloudinary
     }
 

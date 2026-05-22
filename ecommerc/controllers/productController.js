@@ -1,35 +1,28 @@
 import Product from "../models/productModel.js";
 import ApiFeatures from "../util/ApiFeatures.js";
-import { uploadToCloudinary } from "../util/cloudinary.js";
-import fs from "fs";
-// CREATE PRODUCT
+import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
+
 export const createProducts = async (req, res) => {
   try {
     const { title, description, price, stock, category } = req.body;
 
-    let imageData = null; // Store both url and public_id here
+    let imageData = null;
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.path, "products");
-      
-      // Capture both pieces of data returned by Cloudinary
+      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
+
       imageData = {
         public_id: result.public_id,
         url: result.secure_url
       };
-
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
     }
 
-    // Save matching your exact schema requirements
     const product = await Product.create({
       title,
       description,
       price,
       stock,
       category,
-      images: imageData ? [imageData] : [] // Passes both public_id and url
+      images: imageData ? [imageData] : []
     });
 
     return res.status(201).json({
@@ -38,9 +31,6 @@ export const createProducts = async (req, res) => {
       product,
     });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
     console.log(error);
     return res.status(500).json({
       success: false,
@@ -49,7 +39,7 @@ export const createProducts = async (req, res) => {
     });
   }
 };
-// ****************************************
+
 export const getAllProducts = async (req, res) => {
   try {
     const apiFunctionality = new ApiFeatures(Product.find(), req.query)
@@ -59,7 +49,6 @@ export const getAllProducts = async (req, res) => {
 
     let products = await apiFunctionality.query;
 
-    // Check length because find() always returns an array
     if (!products) {
       return res.status(404).json({
         success: false,
@@ -69,17 +58,17 @@ export const getAllProducts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      count: products.length, // Helpful to see how many were found
+      count: products.length,
       products,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      error: error.message, // error.message is cleaner than the whole object
+      error: error.message,
     });
   }
 };
-// **********************************
+
 export const getProductDetail = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -102,8 +91,6 @@ export const getProductDetail = async (req, res) => {
   }
 };
 
-// to edit the product detail
-
 export const updateProductController = async (req, res) => {
   try {
     const { title, description, price, stock, category } = req.body;
@@ -114,17 +101,12 @@ export const updateProductController = async (req, res) => {
     }
 
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.path, "products");
-      
-      // Update with both public_id and url to satisfy validation
+      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
+
       product.images = [{
         public_id: result.public_id,
         url: result.secure_url
       }];
-
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
     }
 
     product.title = title;
@@ -141,9 +123,6 @@ export const updateProductController = async (req, res) => {
       product,
     });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
     return res.status(500).json({
       success: false,
       error: error.message,
@@ -153,13 +132,12 @@ export const updateProductController = async (req, res) => {
 
 export const deleteProductController = async (req, res) => {
   try {
-    const { id } = req.params; // Get ID from URL
+    const { id } = req.params;
 
     const product = await Product.findByIdAndDelete(id);
 
     if (!product) {
       return res.status(404).json({
-        // Use 404 for "Not Found"
         success: false,
         message: "Product not found",
       });
@@ -168,7 +146,7 @@ export const deleteProductController = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Product deleted successfully",
-      deletedId: id, // Sending this back is helpful for the frontend
+      deletedId: id,
     });
   } catch (error) {
     console.error("Delete Error:", error);

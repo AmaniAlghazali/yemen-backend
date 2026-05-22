@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
+import { useStore } from "../context/StoreContext";
+import { getCurrencySymbol, formatPrice } from "../utils/currency";
 
 const CreateProduct = () => {
+    const { store } = useStore();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         title: "",
@@ -13,7 +16,15 @@ const CreateProduct = () => {
         image: "" // Base64 string goes here
     });
 
-    const categories = ["electronics", "clothing", "food", "books", "accessories"];
+    const categories = [
+        "Electronics", "Clothing", "Food", "Books",
+        "Home & Kitchen", "Beauty", "Sports", "Automotive",
+        "Toys & Games", "Health", "Pet Supplies", "Office Supplies",
+        "Baby & Kids", "Jewelry", "Music", "Arts & Crafts",
+        "Garden", "Tools", "Shoes", "Bags & Luggage",
+        "Furniture", "Groceries", "Phones & Tablets",
+        "Computers & Laptops", "Cameras", "Smart Home", "Stationery"
+    ];
 
     // Handle input changes
     const handleChange = (e) => {
@@ -43,33 +54,34 @@ const CreateProduct = () => {
     }
 
     try {
-        const productData = {
-            title: formData.title,
-            description: formData.description,
-            price: Number(formData.price),
-            category: formData.category,
-            images: [{ public_id: "1", url: formData.image }],
-            stock: Number(formData.stock)
-        };
+        const formPayload = new FormData();
+        formPayload.append("title", formData.title);
+        formPayload.append("description", formData.description);
+        formPayload.append("price", Number(formData.price));
+        formPayload.append("category", formData.category);
+        formPayload.append("stock", Number(formData.stock));
 
-        // Attach the token to the Authorization header
+        const imageInput = document.querySelector('input[type="file"]');
+        if (imageInput?.files[0]) {
+            formPayload.append("image", imageInput.files[0]);
+        }
+
         const config = {
             headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "multipart/form-data",
             },
         };
 
         const res = await axios.post(
-            "http://localhost:8000/api/v1/products/create-product", 
-            productData, 
+            "/api/v1/products/create-product", 
+            formPayload, 
             config 
         );
         console.log(res);
-        
 
         alert("✅ Product added successfully!");
-        // 2. Move to the Home page to see all products
-            navigate("/");
+        navigate("/");
     } catch (error) {
         console.error("Backend Response Error:", error.response?.data);
         alert(error.response?.data?.message || "Error adding product");
@@ -93,7 +105,7 @@ const CreateProduct = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="form-control">
-                                    <label className="label font-bold text-xs uppercase opacity-60">Price (SAR)</label>
+                                    <label className="label font-bold text-xs uppercase opacity-60">Price ({getCurrencySymbol(store.currency)})</label>
                                     <input name="price" type="number" placeholder="0.00" className="input input-bordered focus:input-primary" onChange={handleChange} required />
                                 </div>
                                 <div className="form-control">
@@ -141,7 +153,7 @@ const CreateProduct = () => {
                                 <h2 className="card-title text-2xl font-bold">{formData.title || "Product Name"}</h2>
                                 <p className="text-sm opacity-60 line-clamp-2">{formData.description || "No description provided yet."}</p>
                                 <div className="mt-4 flex justify-between items-center">
-                                    <span className="text-2xl font-black text-primary">{formData.price || "0"} SAR</span>
+                                    <span className="text-2xl font-black text-primary">{formatPrice(formData.price || 0, store.currency)}</span>
                                     <span className="text-xs font-medium opacity-50">Stock: {formData.stock}</span>
                                 </div>
                             </div>

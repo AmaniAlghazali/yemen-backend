@@ -1,5 +1,9 @@
 import {Link} from 'react-router-dom'
+import { useStore } from "../context/StoreContext";
+import { formatPrice } from "../utils/currency";
+
 const ProductCard = ({product}) => {
+  const { store } = useStore();
 // console.log(product);
      // --- UNIVERSAL IMAGE LOGIC ---
                     let imageSrc = "https://via.placeholder.com/400?text=No+Image";
@@ -39,7 +43,7 @@ const ProductCard = ({product}) => {
                           
                           <div className="flex flex-col mt-auto pt-4 border-t border-base-200">
                             <span className="text-lg md:text-3xl font-black text-primary">
-                              {product.price} <small className="text-xs font-normal">SAR</small>
+                              {formatPrice(product.price, store.currency)}
                             </span>
                             
                             <div className="flex justify-between items-center mt-4">

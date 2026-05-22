@@ -1,27 +1,60 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
+import axios from "axios";
+import { useStore } from "../context/StoreContext";
+import { formatPrice } from "../utils/currency";
 
 const Navbar = () => {
-  // 1. Lazy Initializer: Gets the cart data once when the component is created
-  // This avoids the ESLint "cascading render" error
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem("cart");
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const { store } = useStore();
+  const [cartItems, setCartItems] = useState([]);
+  const [userName, setUserName] = useState(null);
 
-  // 2. Function to refresh state whenever the cart changes
-  const updateCartData = () => {
-    const savedCart = localStorage.getItem("cart");
-    setCartItems(savedCart ? JSON.parse(savedCart) : []);
+  const navigate = useNavigate();
+  const token = Cookies.get("token") || localStorage.getItem("token");
+  const role = localStorage.getItem("userRole");
+  const isAdmin = token && role === "admin";
+  const userAvatar = localStorage.getItem("userAvatar");
+  const avatarSrc = userAvatar || "https://api.dicebear.com/7.x/avataaars/svg";
+
+  const [cartCount, setCartCount] = useState(0);
+
+  const fetchCart = async () => {
+    const t = Cookies.get("token") || localStorage.getItem("token");
+    if (!t) { setCartItems([]); setCartCount(0); return; }
+    try {
+      const res = await axios.get("/api/v1/cart", {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const items = res.data.cart?.items || [];
+      setCartItems(items);
+      setCartCount(items.length);
+    } catch { setCartItems([]); }
   };
 
   useEffect(() => {
-    // Listen for the "cartUpdated" signal from ProductDetail.jsx
-    window.addEventListener("cartUpdated", updateCartData);
-
-    // Clean up listener on unmount
-    return () => window.removeEventListener("cartUpdated", updateCartData);
+    const handler = () => fetchCart();
+    window.addEventListener("cartUpdated", handler);
+    return () => window.removeEventListener("cartUpdated", handler);
   }, []);
+
+  const handleLogout = () => {
+    Cookies.remove("token");
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userAvatar");
+    navigate("/login");
+  };
+
+  useEffect(() => {
+    if (token) {
+      axios.get("/api/v1/users/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(({ data }) => {
+        if (data.success) setUserName(data.user.name);
+      }).catch(() => {});
+    }
+  }, [token]);
 
   // Calculate total price for the dropdown footer
   const totalPrice = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -45,7 +78,7 @@ const Navbar = () => {
           </ul>
         </div>
         <Link to="/" className="text-2xl md:text-3xl font-black tracking-tighter hover:text-primary transition-colors ms-2">
-          DARAZ
+          {store.storeName}
         </Link>
       </div>
 
@@ -64,14 +97,14 @@ const Navbar = () => {
 
         {/* Shopping Cart Dropdown */}
         <div className="dropdown dropdown-end">
-          <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+          <div tabIndex={0} role="button" onClick={fetchCart} className="btn btn-ghost btn-circle">
             <div className="indicator">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5" />
               </svg>
-              {cartItems.length > 0 && (
+              {cartCount > 0 && (
                 <span className="badge badge-sm badge-primary indicator-item font-bold">
-                  {cartItems.length}
+                  {cartCount}
                 </span>
               )}
             </div>
@@ -83,13 +116,13 @@ const Navbar = () => {
               <span className="font-black text-lg">{cartItems.length} Items</span>
 
               <div className="max-h-64 overflow-y-auto mt-2">
-                {cartItems.length > 0 ? (
-                  cartItems.map((item, index) => (
-                    <div key={index} className="flex items-center gap-3 py-3 border-b border-base-100 last:border-0">
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item) => (
+                      <div key={item.product} className="flex items-center gap-3 py-3 border-b border-base-100 last:border-0">
                       <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover" />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-xs font-bold truncate">{item.title}</h4>
-                        <p className="text-[10px] opacity-60 font-medium">{item.quantity} x {item.price} SAR</p>
+                        <p className="text-[10px] opacity-60 font-medium">{item.quantity} x {formatPrice(item.price, store.currency)}</p>
                       </div>
                     </div>
                   ))
@@ -104,7 +137,7 @@ const Navbar = () => {
                 <div className="mt-2 border-t border-base-200 pt-3">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-sm opacity-60 font-bold uppercase">Subtotal</span>
-                    <span className="text-lg font-black text-primary">{totalPrice} SAR</span>
+                    <span className="text-lg font-black text-primary">{formatPrice(totalPrice, store.currency)}</span>
                   </div>
                   <div className="card-actions">
                     <Link to="/cart" className="btn btn-primary btn-block rounded-xl font-bold">
@@ -121,16 +154,29 @@ const Navbar = () => {
         <div className="dropdown dropdown-end">
           <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar border-2 border-transparent hover:border-primary transition-all">
             <div className="w-10 rounded-full">
-              <img alt="profile" src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+              <img alt="profile" src={avatarSrc} className="object-cover" onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg" }} />
             </div>
           </div>
           <ul tabIndex={0} className="menu menu-sm dropdown-content bg-base-100 rounded-2xl mt-4 w-56 p-3 shadow-2xl border border-base-200 z-1">
-            <li className="menu-title text-[10px] font-black uppercase opacity-40 mb-1 tracking-widest">Account</li>
-            <li><Link to="/login" className="py-3 font-bold hover:bg-primary/10 rounded-xl">Login 🔑</Link></li>
-            <li><Link to="/register" className="py-3 font-bold hover:bg-primary/10 rounded-xl">Register 📝</Link></li>
-            <div className="divider my-1"></div>
-            <li><Link to="/profile" className="py-3 opacity-70">My Profile</Link></li>
-            <li><Link to="/login" className="py-3 text-error font-bold hover:bg-error/10">Logout</Link></li>
+            {userName && <li className="menu-title text-xs font-black opacity-60 mb-1 tracking-widest">{userName}</li>}
+            {!userName && <li className="menu-title text-[10px] font-black uppercase opacity-40 mb-1 tracking-widest">Account</li>}
+            {token ? (
+              <>
+                {isAdmin && (
+                  <li><Link to="/profile" className="py-3 font-bold hover:bg-primary/10 rounded-xl">My Profile</Link></li>
+                )}
+                {isAdmin && (
+                  <li><Link to="/admin" className="py-3 font-bold hover:bg-primary/10 rounded-xl">System Settings</Link></li>
+                )}
+                <div className="divider my-1"></div>
+                <li><button onClick={handleLogout} className="py-3 text-error font-bold hover:bg-error/10 rounded-xl w-full text-left">Logout</button></li>
+              </>
+            ) : (
+              <>
+                <li><Link to="/login" className="py-3 font-bold hover:bg-primary/10 rounded-xl">Login 🔑</Link></li>
+                <li><Link to="/register" className="py-3 font-bold hover:bg-primary/10 rounded-xl">Register 📝</Link></li>
+              </>
+            )}
           </ul>
         </div>
 

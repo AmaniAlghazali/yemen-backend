@@ -25,7 +25,7 @@ const UpdateProfile = () => {
       const token = Cookies.get("token");
       try {
         const { data } = await axios.get(
-          "http://localhost:8000/api/v1/users/profile",
+          "/api/v1/users/profile",
           {
             headers: { Authorization: `Bearer ${token}` },
           },
@@ -85,7 +85,7 @@ const UpdateProfile = () => {
       // --- STEP 1: UPDATE PASSWORD ---
       if (formData.password) {
         await axios.post(
-          "http://localhost:8000/api/v1/users/update-password",
+          "/api/v1/users/update-password",
           {
             oldPassword: formData.oldPassword,
             newPassword: formData.password,
@@ -105,14 +105,14 @@ const UpdateProfile = () => {
       };
 
       const { data } = await axios.put(
-        "http://localhost:8000/api/v1/users/update-profile",
+        "/api/v1/users/update-profile",
         updateData,
         { headers },
       );
 
       if (data.success) {
         alert("Profile and Password Updated Successfully!");
-        navigate("/profile");
+        navigate("/");
       }
     } catch (err) {
       // Handles "Incorrect current password" or "Password same as old" from Backend

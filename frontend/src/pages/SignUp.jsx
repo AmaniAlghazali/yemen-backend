@@ -35,7 +35,7 @@ const SignUp = () => {
                 avatar: avatar // If empty, backend uses default
             };
 
-            const response = await axios.post("http://localhost:8000/api/v1/users/register-user", registrationData);
+            const response = await axios.post("/api/v1/users/register-user", registrationData);
             
             toast.success("Registration Successful!");
             const token = response.data.token;

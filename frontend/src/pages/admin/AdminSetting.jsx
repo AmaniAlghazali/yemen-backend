@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = "/api/v1";
 
 const AdminSetting = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
   const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -30,6 +31,7 @@ const AdminSetting = () => {
     taxRate: "5",
     maintenanceMode: false,
   });
+  const [isStoreLoading, setIsStoreLoading] = useState(false);
 
   // Validation errors
   const [validationErrors, setValidationErrors] = useState({
@@ -53,6 +55,26 @@ const AdminSetting = () => {
         console.error("Failed to parse cached user string:", e);
       }
     }
+  }, []);
+
+  // Fetch store settings from backend on mount
+  useEffect(() => {
+    const fetchStoreSettings = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/store/settings`);
+        if (res.data.success && res.data.store) {
+          setStoreConfig({
+            storeName: res.data.store.storeName || "Yemen Marketplace",
+            currency: res.data.store.currency || "USD",
+            taxRate: String(res.data.store.taxRate ?? "5"),
+            maintenanceMode: res.data.store.maintenanceMode || false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load store settings:", error);
+      }
+    };
+    fetchStoreSettings();
   }, []);
 
   const getAuthHeader = () => {
@@ -119,6 +141,7 @@ const AdminSetting = () => {
         toast.success("Profile updated successfully!");
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setSecurityData((prev) => ({ ...prev, oldPassword: "" }));
+        navigate("/");
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
@@ -204,6 +227,7 @@ const AdminSetting = () => {
           newPassword: "",
           confirmPassword: "",
         });
+        navigate("/");
       }
     } catch (error) {
       // Handle 404 - endpoint not found on backend
@@ -221,10 +245,29 @@ const AdminSetting = () => {
     }
   };
 
-  // 3. Handle Mock Store Adjustments
-  const handleSaveStoreConfig = (e) => {
+  // 3. Handle Store Settings Save
+  const handleSaveStoreConfig = async (e) => {
     e.preventDefault();
-    toast.success("Store settings saved successfully!");
+    setIsStoreLoading(true);
+    try {
+      const res = await axios.put(
+        `${API_URL}/store/settings`,
+        {
+          storeName: storeConfig.storeName,
+          currency: storeConfig.currency,
+          taxRate: Number(storeConfig.taxRate),
+          maintenanceMode: storeConfig.maintenanceMode,
+        },
+        getAuthHeader(),
+      );
+      if (res.data.success) {
+        toast.success("Store settings saved successfully!");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to save store settings");
+    } finally {
+      setIsStoreLoading(false);
+    }
   };
 
   return (
@@ -242,22 +285,12 @@ const AdminSetting = () => {
           </div>
           <Link
             to="/admin"
-            className="btn btn-neutral btn-sm rounded-lg gap-2 w-full sm:w-auto h-10 flex-shrink-"
+            className="btn btn-error btn-outline btn-sm rounded-xl gap-2"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            Back
+            Exit Hub
           </Link>
         </div>
 
@@ -765,9 +798,10 @@ const AdminSetting = () => {
 
               <button
                 type="submit"
-                className="btn btn-primary rounded-lg md:rounded-xl px-6 h-11 mt-2 w-full sm:w-auto"
+                disabled={isStoreLoading}
+                className={`btn btn-primary rounded-lg md:rounded-xl px-6 h-11 mt-2 w-full sm:w-auto ${isStoreLoading ? "loading" : ""}`}
               >
-                Save Settings
+                {isStoreLoading ? "Saving..." : "Save Settings"}
               </button>
             </form>
           )}

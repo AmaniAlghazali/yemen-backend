@@ -3,10 +3,13 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useStore } from "../../context/StoreContext";
+import { formatPrice } from "../../utils/currency";
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = "/api/v1";
 
 const AdminDashboard = () => {
+  const { store } = useStore();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -414,7 +417,7 @@ const AdminDashboard = () => {
               <span>Settings</span>
             </button>
           </li>
-          <li className="mt-auto pt-4 border-t border-base-300">
+          <li>
             <button onClick={handleLogout} className="w-full text-error">
               <svg
                 className="w-5 h-5"
@@ -497,108 +500,55 @@ const AdminDashboard = () => {
               {/* Stats Grid - Fully Responsive */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 {/* Products Stat */}
-                <div className="stat bg-base-100 rounded-xl md:rounded-2xl shadow">
-                  <div className="stat-figure text-primary">
+                <div className="stat bg-base-100 rounded-xl shadow p-2 sm:p-3 md:p-4">
+                  <div className="stat-figure text-primary hidden xs:block">
                     <svg
-                      className="w-6 h-6 md:w-8 md:h-8"
+                      className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                   </div>
-                  <div className="stat-title text-xs md:text-sm">Products</div>
-                  <Link
-                    to="/admin/ViewAllProduct"
-                    className="stat-value text-primary text-lg md:text-2xl hover:underline"
-                  >
+                  <div className="stat-title text-[10px] sm:text-xs md:text-sm">Products</div>
+                  <Link to="/admin/ViewAllProduct" className="stat-value text-primary text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl hover:underline">
                     {dashboardData.totalProducts}
                   </Link>
-                  <div className="stat-desc text-xs md:text-sm">
-                    {productStats.lowStock} low stock
-                  </div>
+                  <div className="stat-desc text-[10px] sm:text-xs md:text-sm">{productStats.lowStock} low stock</div>
                 </div>
 
-                {/* Users Stat */}
-                <div className="stat bg-base-100 rounded-xl md:rounded-2xl shadow">
-                  <div className="stat-figure text-info">
-                    <svg
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                      />
+                <div className="stat bg-base-100 rounded-xl shadow p-2 sm:p-3 md:p-4">
+                  <div className="stat-figure text-info hidden xs:block">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
-                  <div className="stat-title text-xs md:text-sm">Users</div>
-                  <div className="stat-value text-info text-lg md:text-2xl">
-                    {dashboardData.totalUsers}
-                  </div>
-                  <div className="stat-desc text-xs md:text-sm">Registered</div>
+                  <div className="stat-title text-[10px] sm:text-xs md:text-sm">Users</div>
+                  <div className="stat-value text-info text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl">{dashboardData.totalUsers}</div>
+                  <div className="stat-desc text-[10px] sm:text-xs md:text-sm">Registered</div>
                 </div>
 
-                {/* Orders Stat */}
-                <div className="stat bg-base-100 rounded-xl md:rounded-2xl shadow">
-                  <div className="stat-figure text-warning">
-                    <svg
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                      />
+                <div className="stat bg-base-100 rounded-xl shadow p-2 sm:p-3 md:p-4">
+                  <div className="stat-figure text-warning hidden xs:block">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
-                  <div className="stat-title text-xs md:text-sm">Orders</div>
-                  <div className="stat-value text-warning text-lg md:text-2xl">
-                    {dashboardData.totalOrders}
-                  </div>
-                  <div className="stat-desc text-xs md:text-sm">
-                    {getPendingCount()} pending
-                  </div>
+                  <div className="stat-title text-[10px] sm:text-xs md:text-sm">Orders</div>
+                  <div className="stat-value text-warning text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl">{dashboardData.totalOrders}</div>
+                  <div className="stat-desc text-[10px] sm:text-xs md:text-sm">{getPendingCount()} pending</div>
                 </div>
 
-                {/* Revenue Stat */}
-                <div className="stat bg-base-100 rounded-xl md:rounded-2xl shadow">
-                  <div className="stat-figure text-success">
-                    <svg
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
+                <div className="stat bg-base-100 rounded-xl shadow p-2 sm:p-3 md:p-4">
+                  <div className="stat-figure text-success hidden xs:block">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <div className="stat-title text-xs md:text-sm">Revenue</div>
-                  <div className="stat-value text-success text-lg md:text-2xl">
-                    ${getTotalRevenue()?.toFixed(2)}
-                  </div>
-                  <div className="stat-desc text-xs md:text-sm">
-                    Total earned
-                  </div>
+                  <div className="stat-title text-[10px] sm:text-xs md:text-sm">Revenue</div>
+                  <div className="stat-value text-success text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(getTotalRevenue() || 0, store.currency)}</div>
+                  <div className="stat-desc text-[10px] sm:text-xs md:text-sm">Total earned</div>
                 </div>
               </div>
 
@@ -740,7 +690,7 @@ const AdminDashboard = () => {
                             {order.user?.name || "N/A"}
                           </td>
                           <td className="text-xs md:text-sm">
-                            ${(order.totalPrice || 0).toFixed(2)}
+                            {formatPrice(order.totalPrice || 0, store.currency)}
                           </td>
                           <td>
                             <span
@@ -831,7 +781,7 @@ const AdminDashboard = () => {
                             </div>
                           </td>
                           <td className="font-bold text-sm">
-                            ${(order.totalPrice || 0).toFixed(2)}
+                            {formatPrice(order.totalPrice || 0, store.currency)}
                           </td>
                           <td>
                             <span className={getStatusBadge(order.orderStatus)}>
@@ -930,12 +880,16 @@ const AdminDashboard = () => {
                     >
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
-                        <p className="text-xs opacity-50">
-                          Qty: {item.quantity} × ${item.price?.toFixed(2)}
+                        <p className="text-xs opacity-80">
+                          Qty: {item.quantity} ×{" "}
+                          {formatPrice(item.price || 0, store.currency)}
                         </p>
                       </div>
                       <p className="font-bold text-sm">
-                        ${((item.price || 0) * item.quantity).toFixed(2)}
+                        {formatPrice(
+                          (item.price || 0) * item.quantity,
+                          store.currency,
+                        )}
                       </p>
                     </div>
                   ))}
@@ -945,7 +899,7 @@ const AdminDashboard = () => {
               <div className="flex justify-between items-center p-4 bg-primary/10 rounded-xl">
                 <span className="text-lg font-bold">Total</span>
                 <span className="text-xl md:text-2xl font-bold text-primary">
-                  ${(selectedOrder.totalPrice || 0).toFixed(2)}
+                  {formatPrice(selectedOrder.totalPrice || 0, store.currency)}
                 </span>
               </div>
 

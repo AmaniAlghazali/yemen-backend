@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const API_URL = "http://localhost:8000/api/v1";
+const API_URL = "/api/v1";
 
 const UserAdmin = () => {
   const navigate = useNavigate();
@@ -144,6 +145,18 @@ const UserAdmin = () => {
         toast.success("User profile updated safely!");
         setIsEditModalOpen(false);
         await fetchUsers();
+
+        const currentUserId = localStorage.getItem("userId");
+        if (selectedUser._id === currentUserId && editRole === "user") {
+          Cookies.remove("token");
+          localStorage.removeItem("token");
+          localStorage.removeItem("userRole");
+          localStorage.removeItem("userAvatar");
+          localStorage.removeItem("userId");
+          navigate("/login");
+          return;
+        }
+        navigate("/");
       }
     } catch (error) {
       console.error(error);
@@ -352,7 +365,7 @@ const UserAdmin = () => {
 
         <div className="p-4 border-t border-base-300 bg-base-100">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/admin")}
             className="btn btn-error btn-outline btn-sm w-full gap-2 rounded-xl"
           >
             <svg
@@ -447,6 +460,7 @@ const UserAdmin = () => {
               </h1>
             </div>
           </div>
+
 
           <div className="dropdown dropdown-end">
             <label

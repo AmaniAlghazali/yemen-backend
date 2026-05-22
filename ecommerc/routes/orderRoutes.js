@@ -12,7 +12,7 @@ import {
 } from "../controllers/OrderControllers.js";
 const orderRouter = express.Router();
 
-orderRouter.post("/create-order", upload.single("image"),isAuthenticatedUser, createOrderController);
+orderRouter.post("/create-order", isAuthenticatedUser, createOrderController);
 orderRouter.get(
   "/order-details/:id",
   isAuthenticatedUser,

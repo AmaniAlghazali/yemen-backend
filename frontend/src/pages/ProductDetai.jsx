@@ -1,17 +1,20 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useStore } from "../context/StoreContext";
+import { formatPrice } from "../utils/currency";
 
 const ProductDetail = () => {
+    const { store } = useStore();
     const [product, setProduct] = useState(null);
-    // const [qty, setQty] = useState(1);
+    const [qty, setQty] = useState(1);
     const { id } = useParams();
 
     // 1. YOUR API FETCH EFFECT
     useEffect(() => {
         const getProductDetails = async () => {
             try {
-                const response = await axios.get(`http://localhost:8000/api/v1/products/product-detail/${id}`);
+                const response = await axios.get(`/api/v1/products/product-detail/${id}`);
                 setProduct(response.data.product);
             } catch (error) {
                 console.error(error);
@@ -44,28 +47,32 @@ const ProductDetail = () => {
         }
     }
     console.log(imageSrc);
-    const addToCart = () => {
-        // 1. Get existing cart from localStorage or start empty
-        const existingCart = JSON.parse(localStorage.getItem("cart")) || [];
-
-        // 2. Add the new product
-        const newItem = {
-            id: product._id,
-            title: product.title,
-            price: product.price,
-            image: imageSrc,
-            // quantity: qty
-        };
-
-        existingCart.push(newItem);
-
-        // 3. Save back to localStorage
-        localStorage.setItem("cart", JSON.stringify(existingCart));
-
-        // 4. TRIGGER AN EVENT so the Navbar knows to update
-        window.dispatchEvent(new Event("cartUpdated"));
-
-        alert("🛒 Added to cart!");
+    const addToCart = async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            alert("Please login first!");
+            return;
+        }
+        try {
+            await axios.post(
+                "/api/v1/cart/add",
+                {
+                    productId: product._id,
+                    title: product.title,
+                    price: product.price,
+                    image: imageSrc,
+                    quantity: qty,
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+            window.dispatchEvent(new Event("cartUpdated"));
+            alert("Added to cart!");
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.message || "Failed to add to cart");
+        }
     };
     return (
         <div className="max-w-7xl mx-auto px-4 py-10 font-sans">
@@ -89,7 +96,7 @@ const ProductDetail = () => {
                     </div>
 
                     <p className="text-3xl font-black text-primary mb-6">
-                        {product?.price} <small className="text-sm font-normal opacity-60">SAR</small>
+                        {formatPrice(product?.price, store.currency)}
                     </p>
 
                     <div className="bg-base-200 p-6 rounded-2xl mb-8">
@@ -100,11 +107,11 @@ const ProductDetail = () => {
                     </div>
 
                     <div className="mt-auto flex items-center gap-4">
-                        {/* <div className="join border border-base-300 rounded-xl">
-                            <button className="btn btn-ghost join-item" onClick={() => qty > 0 && setQty(qty - 1)}>-</button>
+                        <div className="join border border-base-300 rounded-xl">
+                            <button className="btn btn-ghost join-item" onClick={() => qty > 1 && setQty(qty - 1)}>-</button>
                             <span className="px-6 flex items-center font-bold bg-base-100">{qty}</span>
                             <button className="btn btn-ghost join-item" onClick={() => setQty(qty + 1)}>+</button>
-                        </div> */}
+                        </div>
                         <button
                             className="btn btn-primary flex-1 rounded-xl font-bold shadow-lg"
                             onClick={addToCart}>

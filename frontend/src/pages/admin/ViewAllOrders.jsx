@@ -1,8 +1,11 @@
 import axios from "axios";
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useStore } from "../../context/StoreContext";
+import { formatPrice } from "../../utils/currency";
 
 const ViewAllOrders = () => {
+  const { store } = useStore();
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +55,7 @@ const ViewAllOrders = () => {
   const getAllOrders = useCallback(async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/v1/orders/all-orders",
+        "/api/v1/orders/all-orders",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -71,7 +74,7 @@ const ViewAllOrders = () => {
   const getProducts = useCallback(async () => {
     try {
       const res = await axios.get(
-        "http://localhost:8000/api/v1/products/get-all-products",
+        "/api/v1/products/get-all-products",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -145,7 +148,7 @@ const ViewAllOrders = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:8000/api/v1/orders/update-order-element/${editingOrderId}`,
+        `/api/v1/orders/update-order-element/${editingOrderId}`,
         formData,
         {
           headers: {
@@ -199,36 +202,37 @@ const ViewAllOrders = () => {
         fallbackImgUrl = selectedProduct.image;
       }
 
-      const formData = new FormData();
-
-      formData.append("address", newOrder.address);
-      formData.append("mobileNo", newOrder.mobileNo);
-      formData.append("city", newOrder.city);
-      formData.append("country", newOrder.country);
-      formData.append("zipCode", newOrder.zipCode);
-      formData.append("productName", newOrder.productName);
-      formData.append("productPrice", newOrder.productPrice);
-      formData.append("quantity", newOrder.quantity);
-      formData.append("productId", newOrder.productId);
-      formData.append("paymentId", newOrder.paymentId);
-      formData.append("paymentStatus", newOrder.paymentStatus);
-      formData.append("taxPrice", newOrder.taxPrice);
-      formData.append("shippingCost", newOrder.shippingCost);
-      formData.append("totalPrice", newOrder.totalPrice);
-      formData.append("orderStatus", newOrder.orderStatus);
-      formData.append("fallbackImageUrl", fallbackImgUrl);
-
-      if (newOrderImageFile) {
-        formData.append("image", newOrderImageFile);
-      }
+      const body = {
+        shippingInfo: {
+          address: newOrder.address,
+          mobileNo: newOrder.mobileNo,
+          city: newOrder.city,
+          country: newOrder.country,
+          zipCode: newOrder.zipCode,
+        },
+        items: [
+          {
+            productId: newOrder.productId,
+            title: newOrder.productName,
+            price: Number(newOrder.productPrice),
+            quantity: Number(newOrder.quantity),
+            image: fallbackImgUrl,
+          },
+        ],
+        paymentId: newOrder.paymentId,
+        paymentStatus: newOrder.paymentStatus,
+        taxPrice: Number(newOrder.taxPrice),
+        shippingCost: Number(newOrder.shippingCost),
+        totalPrice: Number(newOrder.totalPrice),
+        orderStatus: newOrder.orderStatus,
+      };
 
       const response = await axios.post(
-        "http://localhost:8000/api/v1/orders/create-order",
-        formData,
+        "/api/v1/orders/create-order",
+        body,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
           withCredentials: true,
         },
@@ -270,7 +274,7 @@ const ViewAllOrders = () => {
   const updateOrderStatus = async (id, status) => {
     try {
       await axios.put(
-        `http://localhost:8000/api/v1/orders/update-order-status/${id}`,
+        `/api/v1/orders/update-order-status/${id}`,
         { status },
         {
           headers: {
@@ -296,7 +300,7 @@ const ViewAllOrders = () => {
   const deleteOrder = async (id) => {
     try {
       await axios.delete(
-        `http://localhost:8000/api/v1/orders/delete-order/${id}`,
+        `/api/v1/orders/delete-order/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -329,9 +333,12 @@ const ViewAllOrders = () => {
 
         <Link
           to="/admin"
-          className="btn btn-neutral btn-sm rounded-lg gap-2 w-full sm:w-auto h-10 shrink-0"
+          className="btn btn-error btn-outline btn-sm rounded-xl gap-2 w-full sm:w-auto h-10 shrink-0"
         >
-          Back
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Exit Hub
         </Link>
       </div>
 
@@ -581,7 +588,7 @@ const ViewAllOrders = () => {
                           <p>Qty: {item.quantity}</p>
 
                           <p className="font-bold text-green-600">
-                            ${item.price}
+                            {formatPrice(item.price, store.currency)}
                           </p>
                         </div>
                       </div>
@@ -622,18 +629,18 @@ const ViewAllOrders = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span>Tax</span>
-                        <span>${order.taxPrice}</span>
+                        <span>{formatPrice(order.taxPrice, store.currency)}</span>
                       </div>
 
                       <div className="flex justify-between">
                         <span>Shipping</span>
-                        <span>${order.shippingCost}</span>
+                        <span>{formatPrice(order.shippingCost, store.currency)}</span>
                       </div>
 
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span className="text-green-600">
-                          ${order.totalPrice}
+                          {formatPrice(order.totalPrice, store.currency)}
                         </span>
                       </div>
 
