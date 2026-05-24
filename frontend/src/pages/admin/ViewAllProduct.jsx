@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useStore } from "../../context/StoreContext";
 import { formatPrice } from "../../utils/currency";
+import AdminLayout from "../../components/AdminLayout";
 
-// Fallback configuration if your context environment values are not initialized globally
 const API_URL = "/api/v1";
 const toast = {
   success: (msg) => alert(`Success: ${msg}`),
@@ -215,265 +215,7 @@ const ViewAllProduct = () => {
   });
 
   return (
-    <div className="min-h-screen bg-base-200 grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-      {/* SIDEBAR: Focused completely on Inventory Navigation */}
-      <aside className="hidden lg:flex flex-col bg-base-100 border-r border-base-300 w-full min-h-screen sticky top-0">
-        <div className="h-16 flex items-center px-6 bg-base-100 border-b border-base-300 gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-              />
-            </svg>
-          </div>
-          <h2 className="text-lg font-bold text-base-content tracking-tight">
-            Products Hub
-          </h2>
-        </div>
-
-        <nav className="menu p-4 space-y-1.5 flex-1">
-          <li className="menu-title text-xs font-semibold uppercase tracking-wider opacity-40 px-2 mb-1">
-            Views
-          </li>
-          <li>
-            <Link
-              to="/admin/ViewAllProduct"
-              className="w-full active bg-primary text-primary-content font-semibold shadow-sm rounded-xl"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-              All Products
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/admin"
-              className="w-full font-medium rounded-xl hover:bg-base-200"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-              Dashboard
-            </Link>
-          </li>
-
-          <li className="menu-title text-xs font-semibold uppercase tracking-wider opacity-40 px-2 mt-4 mb-1">
-            Management
-          </li>
-          <li>
-            <Link
-              to="/ViewAllOrders"
-              className="w-full font-medium rounded-xl hover:bg-base-200"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                />
-              </svg>
-              Orders List
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/admin/users"
-              className="w-full font-medium rounded-xl hover:bg-base-200"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
-                />
-              </svg>
-              Users & Customers
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/admin/settings"
-              className="w-full font-medium rounded-xl hover:bg-base-200"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-              </svg>
-              Store Configuration
-            </Link>
-          </li>
-        </nav>
-
-        <div className="p-4 border-t border-base-300 bg-base-100">
-          <button onClick={() => navigate("/admin")} className="btn btn-error btn-outline btn-sm w-full gap-2 rounded-xl">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            Exit Hub
-          </button>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT WRAPPER CONTAINER */}
-      <div className="flex flex-col w-full min-w-0">
-        {/* TOP NAVBAR: Streamlined to prioritize Product Catalog context */}
-        <header className="h-16 bg-base-100 shadow-xs border-b border-base-300 flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            {/* Drawer Toggle for Mobile Dropdown */}
-            <div className="dropdown lg:hidden">
-              <label tabIndex={0} className="btn btn-square btn-ghost btn-sm">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </label>
-              <ul
-                tabIndex={0}
-                className="dropdown-content menu p-3 shadow-xl bg-base-100 rounded-2xl w-60 mt-3 space-y-1.5 border border-base-300"
-              >
-                <li className="menu-title font-bold text-primary text-xs px-2">
-                  Catalog Views
-                </li>
-                <li>
-                  <Link
-                    to="/admin/products"
-                    className="active bg-primary text-primary-content font-medium"
-                  >
-                    Products Management
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin">Dashboard</Link>
-                </li>
-                <li>
-                  <Link to="/ViewAllOrders">Orders Management</Link>
-                </li>
-                <li>
-                  <Link to="/admin/users">User Management</Link>
-                </li>
-                <li>
-                  <Link to="/admin/settings">Settings</Link>
-                </li>
-                <div className="divider my-1"></div>
-                <li>
-                  <button className="text-error font-medium">Sign Out</button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Context Breadcrumb Title Indicator */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-base-300 text-base-content/70 hidden sm:inline-block">
-                Admin
-              </span>
-              <span className="text-base-content/40 hidden sm:inline-block">
-                /
-              </span>
-              <h1 className="text-base md:text-lg font-bold text-base-content tracking-tight">
-                Products Management
-              </h1>
-            </div>
-          </div>
-
-
-          {/* USER PROFILE AVATAR DROPDOWN */}
-          <div className="dropdown dropdown-end">
-            <label
-              tabIndex={0}
-              className="btn btn-ghost btn-circle avatar btn-sm md:btn-md"
-            >
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-inner">
-                <span className="text-sm md:text-base font-bold">A</span>
-              </div>
-            </label>
-            <ul
-              tabIndex={0}
-              className="mt-3 p-2 shadow-lg menu menu-sm dropdown-content bg-base-100 rounded-xl w-52 border border-base-300 z-50"
-            >
-              <li>
-                <Link to="/" className="py-2">
-                  Go to Live Storefront
-                </Link>
-              </li>
-              <div className="divider my-1"></div>
-              <li>
-                <button className="text-error py-2 font-medium">Logout</button>
-              </li>
-            </ul>
-          </div>
-        </header>
-
-        {/* WORKSPACE VIEW PORT */}
-        <main className="p-4 md:p-6 space-y-6 max-w-7xl w-full mx-auto flex-1">
+    <AdminLayout title="Products Management">
           {/* SEARCH AND CALL TO ACTION CONTROLS */}
           <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-base-100 p-4 rounded-2xl shadow-sm border border-base-300">
             <div className="w-full sm:w-72 relative">
@@ -670,9 +412,6 @@ const ViewAllProduct = () => {
               </table>
             </div>
           </div>
-        </main>
-      </div>
-
       {/* PRODUCT DIALOG MANAGEMENT MODAL POPUP */}
       {isProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -829,7 +568,7 @@ const ViewAllProduct = () => {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 };
 

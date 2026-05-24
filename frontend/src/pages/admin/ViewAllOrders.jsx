@@ -1,8 +1,8 @@
 import axios from "axios";
-import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
 import { useStore } from "../../context/StoreContext";
 import { formatPrice } from "../../utils/currency";
+import AdminLayout from "../../components/AdminLayout";
 
 const ViewAllOrders = () => {
   const { store } = useStore();
@@ -318,32 +318,7 @@ const ViewAllOrders = () => {
   };
 
   return (
-    <>
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-base-100 p-4 md:p-6 rounded-2xl shadow-sm border border-base-300 mb-5">
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg md:text-xl font-bold text-base-content tracking-tight">
-            Orders Dashboard
-          </h2>
-
-          <p className="text-xs md:text-sm text-base-content/60 mt-0.5">
-            Manage all orders and shipping details
-          </p>
-        </div>
-
-        <Link
-          to="/admin"
-          className="btn btn-error btn-outline btn-sm rounded-xl gap-2 w-full sm:w-auto h-10 shrink-0"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Exit Hub
-        </Link>
-      </div>
-
-      <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
+    <AdminLayout title="Orders Management">
           {/* TOP */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <h1 className="text-3xl font-bold text-gray-800">All Orders</h1>
@@ -692,9 +667,7 @@ const ViewAllOrders = () => {
               </p>
             </div>
           )}
-        </div>
-      </div>
-    </>
+    </AdminLayout>
   );
 };
 

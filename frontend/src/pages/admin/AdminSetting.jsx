@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
+import AdminLayout from "../../components/AdminLayout";
 
 const API_URL = "/api/v1";
 
@@ -271,28 +272,7 @@ const AdminSetting = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 p-4 md:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* HEADER BLOCK */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-base-100 p-4 md:p-6 rounded-2xl shadow-sm border border-base-300">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg md:text-xl font-bold text-base-content tracking-tight">
-              Settings
-            </h2>
-            <p className="text-xs md:text-sm text-base-content/60 mt-0.5">
-              Manage your account, security, and store settings
-            </p>
-          </div>
-          <Link
-            to="/admin"
-            className="btn btn-error btn-outline btn-sm rounded-xl gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Exit Hub
-          </Link>
-        </div>
+    <AdminLayout title="Settings">
 
         {/* INTERACTIVE CONTROLS TABS - Responsive */}
         <div className="tabs tabs-boxed bg-base-100 p-1.5 rounded-xl border border-base-300 overflow-x-auto">
@@ -806,8 +786,7 @@ const AdminSetting = () => {
             </form>
           )}
         </div>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };
 
