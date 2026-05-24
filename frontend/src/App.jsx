@@ -3,7 +3,7 @@ import Navbar from "./components/Navbar";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ProductDetail from "./pages/ProductDetai";
@@ -16,14 +16,18 @@ import Profile from "./pages/Profile";
 import UpdateProfile from "./pages/UpdateProfile";
 import ForgotPassword from "./pages/Forgot-password";
 import ResetPassword from "./pages/ResetPassword";
-import AdminDashboard from "./pages/admin/AdminDashbourd"; // ADD THIS
+import AdminDashboard from "./pages/admin/AdminDashbourd";
 import ViewAllOrders from "./pages/admin/ViewAllOrders";
 import ViewAllProduct from "./pages/admin/ViewAllProduct";
 import UserAdmin from "./pages/admin/UserAdmin";
 import AdminSetting from "./pages/admin/AdminSetting";
 import { useStore } from "./context/StoreContext";
 
-const App = () => {
+const adminPaths = ["/admin", "/viewAllOrders", "/admin/viewAllProduct", "/admin/users", "/admin/settings", "/profile", "/update-profile"];
+
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminPage = adminPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
   const { store, loading } = useStore();
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("userRole");
@@ -53,14 +57,13 @@ const App = () => {
   return (
     <>
       <ToastContainer />
-      <Navbar />
+      {!isAdminPage && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/product-detail/:id" element={<ProductDetail />} />
         <Route path="/create-product" element={<CreateProduct />} />
-
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -69,13 +72,17 @@ const App = () => {
         <Route path="/update-profile" element={isAdmin ? <UpdateProfile /> : <Navigate to="/login" />} />
         <Route path="/password/reset/:token" element={<ResetPassword />} />
         <Route path="/admin" element={isAdmin ? <AdminDashboard /> : <Navigate to="/login" />} />
-        <Route path="/viewAllorders" element={isAdmin ? <ViewAllOrders /> : <Navigate to="/login" />} />
+        <Route path="/viewAllOrders" element={isAdmin ? <ViewAllOrders /> : <Navigate to="/login" />} />
+        <Route path="/ViewAllOrders" element={<Navigate to="/viewAllOrders" replace />} />
+        <Route path="/viewAllorders" element={<Navigate to="/viewAllOrders" replace />} />
         <Route path="/admin/viewAllProduct" element={isAdmin ? <ViewAllProduct /> : <Navigate to="/login" />} />
         <Route path="/admin/users" element={isAdmin ? <UserAdmin /> : <Navigate to="/login" />} />
         <Route path="/admin/settings" element={isAdmin ? <AdminSetting /> : <Navigate to="/login" />} />
       </Routes>
-      <Footer />
+      {!isAdminPage && <Footer />}
     </>
   );
 };
+
+const App = () => <AppContent />;
 export default App;
