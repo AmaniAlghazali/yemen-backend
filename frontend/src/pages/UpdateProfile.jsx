@@ -96,13 +96,12 @@ const UpdateProfile = () => {
       }
 
       // --- STEP 2: UPDATE NAME/EMAIL/AVATAR ---
-      // This only runs if Step 1 succeeds!
       const updateData = {
         name: formData.name,
         email: formData.email,
-        avatar: avatar || undefined,
-        oldPassword: formData.oldPassword || undefined, // Only send if user entered it
       };
+      if (avatar) updateData.avatar = avatar;
+      if (formData.oldPassword) updateData.oldPassword = formData.oldPassword;
 
       const { data } = await axios.put(
         "/api/v1/users/update-profile",

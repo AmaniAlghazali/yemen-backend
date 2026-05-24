@@ -149,6 +149,10 @@ export const updateUserProfileController = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    if (!req.body.oldPassword) {
+      return res.status(400).json({ success: false, message: "Current password is required to update profile" });
+    }
+
     const isMatched = await user.comparePassword(req.body.oldPassword);
     if (!isMatched) {
       return res.status(401).json({ success: false, message: "Incorrect current password" });
@@ -180,6 +184,10 @@ export const updateUserProfileController = async (req, res) => {
 export const updatePasswordController = async (req, res) => {
   try {
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
+
+    if (!oldPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({ success: false, message: "All password fields are required" });
+    }
 
     const user = await User.findById(req.user._id).select("+password");
 
