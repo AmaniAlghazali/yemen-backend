@@ -260,11 +260,8 @@ export const resetPasswordRequestController = async (req, res) => {
     const resetToken = user.resetPassword();
     await user.save({ validateBeforeSave: false });
 
-    // ===========================================
-    // THIS IS THE FIX - USE FRONTEND URL!
-    // ===========================================
-    const resetPasswordUrl = `http://localhost:5173/password/reset/${resetToken}`;
-    // ===========================================
+    const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    const resetPasswordUrl = `${frontendUrl}/password/reset/${resetToken}`;
 
     const message = `Your password reset token is :- \n\n ${resetPasswordUrl} \n\n If you did not request this email, please ignore it.`;
 

@@ -37,4 +37,15 @@ app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/store", storeRouter);
 app.use("/api/v1/cart", cartRouter);
 
+app.get("/api/health", (req, res) => {
+  res.json({ success: true, message: "Server is running", timestamp: new Date().toISOString() });
+});
+
+app.use((req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ success: false, message: "API route not found" });
+  }
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
 export default app;

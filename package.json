@@ -2,6 +2,11 @@
   "name": "yemen-backend",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "node ecommerc/index.js",
+    "dev": "node --watch ecommerc/index.js"
+  },
   "dependencies": {
     "express": "^5.2.1",
     "mongoose": "^8.23.0",
