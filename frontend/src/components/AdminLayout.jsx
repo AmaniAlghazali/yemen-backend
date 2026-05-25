@@ -50,6 +50,10 @@ const AdminLayout = ({ children, title = "Dashboard" }) => {
         if (res.data.success) {
           setAdmin(res.data.user);
           localStorage.setItem("user", JSON.stringify(res.data.user));
+          const url = res.data.user.profileUrl;
+          if (url && url !== "url") {
+            localStorage.setItem("userAvatar", url);
+          }
         }
       } catch {
         const cached = localStorage.getItem("user");
@@ -93,7 +97,7 @@ const AdminLayout = ({ children, title = "Dashboard" }) => {
   }
 
   const adminInitial = admin?.name?.charAt(0)?.toUpperCase() || "A";
-  const avatarUrl = admin?.profile?.url;
+  const avatarUrl = admin?.profileUrl || localStorage.getItem("userAvatar");
 
   return (
     <div className="min-h-screen bg-base-200 flex">
