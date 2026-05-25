@@ -57,7 +57,7 @@ const ProductDetail = () => {
             await axios.post(
                 "/api/v1/cart/add",
                 {
-                    productId: product._id,
+                    productId: product.id,
                     title: product.title,
                     price: product.price,
                     image: imageSrc,

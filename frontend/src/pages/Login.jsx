@@ -70,8 +70,8 @@ const Login = () => {
       if (user.role) {
         localStorage.setItem("userRole", user.role);
       }
-      if (user._id) {
-        localStorage.setItem("userId", user._id);
+      if (user.id) {
+        localStorage.setItem("userId", user.id);
       }
       if (user.profile?.url && user.profile.url !== "url") {
         localStorage.setItem("userAvatar", user.profile.url);

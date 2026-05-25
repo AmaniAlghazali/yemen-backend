@@ -21,8 +21,8 @@ const ProductCard = ({product}) => {
                     }
 
   return (
-    <Link to={`/product-detail/${product._id}`}>
-        <div key={product._id} className="group card bg-base-100 shadow-sm hover:shadow-2xl transition-all duration-500 border border-base-300 overflow-hidden rounded-2xl">
+    <Link to={`/product-detail/${product.id}`}>
+        <div key={product.id} className="group card bg-base-100 shadow-sm hover:shadow-2xl transition-all duration-500 border border-base-300 overflow-hidden rounded-2xl">
                         <figure className="relative h-40 md:h-64 bg-base-200">
                           <img
                             src={imageSrc}

@@ -137,7 +137,7 @@ const UserAdmin = () => {
     setIsActionLoading(true);
     try {
       const res = await axios.put(
-        `${API_URL}/users/update-user/${selectedUser._id}`,
+        `${API_URL}/users/update-user/${selectedUser.id}`,
         { name: editName, email: editEmail, role: editRole },
         getAuthHeader(),
       );
@@ -148,7 +148,7 @@ const UserAdmin = () => {
         await fetchUsers();
 
         const currentUserId = localStorage.getItem("userId");
-        if (selectedUser._id === currentUserId && editRole === "user") {
+        if (selectedUser.id === currentUserId && editRole === "user") {
           Cookies.remove("token");
           localStorage.removeItem("token");
           localStorage.removeItem("userRole");
@@ -332,7 +332,7 @@ const UserAdmin = () => {
                   ) : (
                     filteredUsers.map((user) => (
                       <tr
-                        key={user._id}
+                        key={user.id}
                         className="hover:bg-base-200/40 transition-colors"
                       >
                         <td>
@@ -409,7 +409,7 @@ const UserAdmin = () => {
                               </svg>
                             </button>
                             <button
-                              onClick={() => handleDeleteUser(user._id)}
+                              onClick={() => handleDeleteUser(user.id)}
                               className="btn btn-sm btn-square btn-ghost text-error rounded-lg"
                               title="Wipe From DB"
                             >
@@ -445,7 +445,7 @@ const UserAdmin = () => {
               ) : (
                 filteredUsers.map((user) => (
                   <div
-                    key={user._id}
+                    key={user.id}
                     className="p-4 space-y-3 bg-base-100 hover:bg-base-200/20 transition-all"
                   >
                     <div className="flex items-center justify-between">
@@ -487,7 +487,7 @@ const UserAdmin = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDeleteUser(user._id)}
+                        onClick={() => handleDeleteUser(user.id)}
                         className="btn btn-xs btn-outline btn-error rounded-md px-3 gap-1 h-7"
                       >
                         Delete
@@ -535,7 +535,7 @@ const UserAdmin = () => {
                   Unique Document ID
                 </span>
                 <p className="text-xs font-mono break-all text-base-content/90 select-all font-medium mt-0.5">
-                  {selectedUser._id}
+                  {selectedUser.id}
                 </p>
               </div>
               <div>

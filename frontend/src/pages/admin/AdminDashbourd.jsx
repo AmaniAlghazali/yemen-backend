@@ -285,9 +285,9 @@ const AdminDashboard = () => {
                   </tr>
                 ) : (
                   recentOrders.map((order) => (
-                    <tr key={order._id} className="hover:bg-base-200/40">
+                    <tr key={order.id} className="hover:bg-base-200/40">
                       <td className="font-mono text-xs font-medium">
-                        #{order._id?.slice(-6)}
+                        #{order.id?.slice(-6)}
                       </td>
                       <td>
                         <div className="flex items-center gap-2">
@@ -314,7 +314,7 @@ const AdminDashboard = () => {
                       </td>
                       <td className="text-right">
                         <button
-                          onClick={() => handleDeleteOrder(order._id)}
+                          onClick={() => handleDeleteOrder(order.id)}
                           className="btn btn-ghost btn-xs text-error hover:bg-error/10"
                         >
                           Delete

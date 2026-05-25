@@ -107,7 +107,7 @@ const ViewAllOrders = () => {
       currentImage = firstItem.image;
     }
 
-    setEditingOrderId(order._id);
+    setEditingOrderId(order.id);
 
     setEditOrderFormData({
       address: order.shippingInfo?.address || "",
@@ -161,7 +161,7 @@ const ViewAllOrders = () => {
 
       setOrders((prev) =>
         prev.map((order) =>
-          order._id === editingOrderId
+          order.id === editingOrderId
             ? { ...order, ...response.data.order }
             : order,
         ),
@@ -186,7 +186,7 @@ const ViewAllOrders = () => {
       setLoading(true);
 
       const selectedProduct = products.find(
-        (p) => p._id === newOrder.productId,
+        (p) => p.id === newOrder.productId,
       );
 
       if (!selectedProduct) {
@@ -286,7 +286,7 @@ const ViewAllOrders = () => {
 
       setOrders((prev) =>
         prev.map((order) =>
-          order._id === id ? { ...order, orderStatus: status } : order,
+          order.id === id ? { ...order, orderStatus: status } : order,
         ),
       );
 
@@ -309,7 +309,7 @@ const ViewAllOrders = () => {
         },
       );
 
-      setOrders((prev) => prev.filter((order) => order._id !== id));
+      setOrders((prev) => prev.filter((order) => order.id !== id));
 
       alert("Order Deleted");
     } catch (error) {
@@ -413,13 +413,13 @@ const ViewAllOrders = () => {
                   value={newOrder.productId}
                   onChange={(e) => {
                     const selectedProduct = products.find(
-                      (p) => p._id === e.target.value,
+                      (p) => p.id === e.target.value,
                     );
 
                     if (selectedProduct) {
                       setNewOrder({
                         ...newOrder,
-                        productId: selectedProduct._id,
+                        productId: selectedProduct.id,
                         productName:
                           selectedProduct.name || selectedProduct.title,
                         productPrice: selectedProduct.price,
@@ -430,7 +430,7 @@ const ViewAllOrders = () => {
                   <option value="">Select Product</option>
 
                   {products.map((p) => (
-                    <option key={p._id} value={p._id}>
+                    <option key={p.id} value={p.id}>
                       {p.name || p.title}
                     </option>
                   ))}
@@ -523,14 +523,14 @@ const ViewAllOrders = () => {
           <div className="grid gap-6">
             {orders.map((order) => (
               <div
-                key={order._id}
+                key={order.id}
                 className="bg-white rounded-2xl shadow-lg overflow-hidden"
               >
                 <div className="bg-black text-white p-4 flex justify-between items-center">
                   <div>
                     <h2 className="font-bold">Order ID</h2>
 
-                    <p className="text-sm text-gray-300">{order._id}</p>
+                    <p className="text-sm text-gray-300">{order.id}</p>
                   </div>
 
                   <span className="badge badge-primary">
@@ -545,7 +545,7 @@ const ViewAllOrders = () => {
 
                     {order.orderItems?.map((item) => (
                       <div
-                        key={item._id}
+                        key={item.id}
                         className="flex items-center gap-4 border rounded-xl p-3 mb-3"
                       >
                         <img
@@ -624,7 +624,7 @@ const ViewAllOrders = () => {
                           className="select select-bordered"
                           value={order.orderStatus}
                           onChange={(e) =>
-                            updateOrderStatus(order._id, e.target.value)
+                            updateOrderStatus(order.id, e.target.value)
                           }
                         >
                           <option value="Pending">Pending</option>
@@ -642,7 +642,7 @@ const ViewAllOrders = () => {
                         </button>
 
                         <button
-                          onClick={() => deleteOrder(order._id)}
+                          onClick={() => deleteOrder(order.id)}
                           className="btn btn-error"
                         >
                           Delete

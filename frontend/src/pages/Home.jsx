@@ -152,7 +152,7 @@ const Home = () => {
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
-                    <ProductCard key={product._id} product={product} />
+                    <ProductCard key={product.id} product={product} />
                   ))
                 ) : (
                   <div className="col-span-full py-20 text-center bg-base-200 rounded-3xl border-2 border-dashed border-base-300">

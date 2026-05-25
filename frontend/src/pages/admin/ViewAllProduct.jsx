@@ -133,7 +133,7 @@ const ViewAllProduct = () => {
 
       if (editingProduct) {
         await axios.put(
-          `${API_URL}/products/update-product/${editingProduct._id}`,
+          `${API_URL}/products/update-product/${editingProduct.id}`,
           payload,
           config,
         );
@@ -348,7 +348,7 @@ const ViewAllProduct = () => {
                   ) : (
                     filteredProducts.map((product) => (
                       <tr
-                        key={product._id}
+                        key={product.id}
                         className="hover:bg-base-200/40 transition-colors"
                       >
                         <td>
@@ -404,7 +404,7 @@ const ViewAllProduct = () => {
                               Edit
                             </button>
                             <button
-                              onClick={() => handleDeleteProduct(product._id)}
+                              onClick={() => handleDeleteProduct(product.id)}
                               className="btn btn-sm btn-error btn-outline rounded-lg text-xs font-bold"
                             >
                               Delete
