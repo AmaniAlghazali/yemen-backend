@@ -1,4 +1,4 @@
-import Product from "../models/productModel.js";
+import { prisma } from "../db/conn.js";
 import ApiFeatures from "../util/ApiFeatures.js";
 import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
 
@@ -9,20 +9,23 @@ export const createProducts = async (req, res) => {
     let imageData = null;
     if (req.file) {
       const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
-
-      imageData = {
-        public_id: result.public_id,
-        url: result.secure_url
-      };
+      imageData = { publicId: result.public_id, url: result.secure_url };
     }
 
-    const product = await Product.create({
+    const data = {
       title,
       description,
-      price,
-      stock,
+      price: Number(price),
+      stock: Number(stock) || 1,
       category,
-      images: imageData ? [imageData] : []
+    };
+    if (imageData) {
+      data.images = { create: [{ publicId: imageData.publicId, url: imageData.url }] };
+    }
+
+    const product = await prisma.product.create({
+      data,
+      include: { images: true },
     });
 
     return res.status(201).json({
@@ -42,14 +45,15 @@ export const createProducts = async (req, res) => {
 
 export const getAllProducts = async (req, res) => {
   try {
-    const apiFunctionality = new ApiFeatures(Product.find(), req.query)
+    const queryArgs = { where: {}, include: { images: true } };
+    const apiFunctionality = new ApiFeatures(queryArgs, req.query)
       .search()
       .filter()
       .pagination();
 
-    let products = await apiFunctionality.query;
+    const products = await prisma.product.findMany(queryArgs);
 
-    if (!products) {
+    if (!products || products.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No products found matching that criteria",
@@ -71,51 +75,54 @@ export const getAllProducts = async (req, res) => {
 
 export const getProductDetail = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      include: { images: true, reviews: true },
+    });
     if (!product) {
       return res.status(404).json({
         success: false,
         message: "product not found",
       });
     }
-
-    return res.status(200).json({
-      success: true,
-      product,
-    });
+    return res.status(200).json({ success: true, product });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error,
-    });
+    return res.status(500).json({ success: false, error });
   }
 };
 
 export const updateProductController = async (req, res) => {
   try {
     const { title, description, price, stock, category } = req.body;
-    const product = await Product.findById(req.params.id);
+    const existing = await prisma.product.findUnique({
+      where: { id: req.params.id },
+    });
 
-    if (!product) {
+    if (!existing) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
+    const updateData = {
+      title,
+      description,
+      price: Number(price),
+      stock: Number(stock),
+      category,
+    };
+
     if (req.file) {
       const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
-
-      product.images = [{
-        public_id: result.public_id,
-        url: result.secure_url
-      }];
+      await prisma.productImage.deleteMany({ where: { productId: existing.id } });
+      await prisma.productImage.create({
+        data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
+      });
     }
 
-    product.title = title;
-    product.description = description;
-    product.price = price;
-    product.stock = stock;
-    product.category = category;
-
-    await product.save();
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: updateData,
+      include: { images: true },
+    });
 
     return res.status(200).json({
       success: true,
@@ -133,23 +140,19 @@ export const updateProductController = async (req, res) => {
 export const deleteProductController = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const product = await Product.findByIdAndDelete(id);
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
+    await prisma.product.delete({ where: { id } });
     return res.status(200).json({
       success: true,
       message: "Product deleted successfully",
       deletedId: id,
     });
   } catch (error) {
-    console.error("Delete Error:", error);
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
     return res.status(500).json({
       success: false,
       message: "Error while deleting product",

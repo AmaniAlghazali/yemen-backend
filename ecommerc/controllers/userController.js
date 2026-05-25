@@ -1,17 +1,10 @@
-import User from "../models/userModel.js";
-import Product from "../models/productModel.js";
-import Order from "../models/orderModel.js";
-import ContactMessage from "../models/contactModel.js";
+import { prisma } from "../db/conn.js";
 import { sendToken } from "../util/jwtToken.js";
 import { sendEmail } from "../util/sendMail.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import cloudinary from "../util/cloudinary.js";
-
-
-// ==========================================
-// MIDDLEWARES
-// ==========================================
 
 export const isAuthenticatedUser = async (req, res, next) => {
   try {
@@ -30,8 +23,8 @@ export const isAuthenticatedUser = async (req, res, next) => {
     }
 
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
-   
-    req.user = await User.findById(decodedData.id);
+
+    req.user = await prisma.user.findUnique({ where: { id: decodedData.id } });
 
     if (!req.user) {
       return res.status(404).json({
@@ -61,31 +54,30 @@ export const isAdmin = (...roles) => {
   };
 };
 
-// ==========================================
-// USER CONTROLLERS
-// ==========================================
-
-// Register User
 export const resgisterUserController = async (req, res) => {
   try {
     const { name, email, password, avatar } = req.body;
-    const profile = avatar
-      ? { public_id: "local", url: avatar }
-      : { public_id: "id", url: "url" };
-    const user = await User.create({
-      name,
-      email,
-      password,
-      profile,
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const profilePublicId = avatar ? "local" : "id";
+    const profileUrl = avatar || "url";
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        profilePublicId,
+        profileUrl,
+      },
     });
 
-    sendToken(user, 201, res);
+    const { password: _, ...userData } = user;
+    sendToken(userData, 201, res);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Login User
 export const loginUserController = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -95,43 +87,46 @@ export const loginUserController = async (req, res) => {
         .json({ success: false, message: "Please enter email & password" });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid email or password" });
     }
 
-    const isPasswordMatched = await user.comparePassword(password);
+    const isPasswordMatched = await bcrypt.compare(password, user.password);
     if (!isPasswordMatched) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid email or password" });
     }
 
-    sendToken(user, 200, res);
+    const { password: _, ...userData } = user;
+    sendToken(userData, 200, res);
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Get User Profile (Self)
 export const userProfileController = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
-    res.status(200).json({ success: true, user });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+    const { password: _, ...userData } = user;
+    res.status(200).json({ success: true, user: userData });
   } catch (error) {
     res.status(500).json({ success: false, message: "Error loading profile" });
   }
 };
-// Get User Photo by Email (Public - for Login page preview)
+
 export const getUserPhotoByEmail = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.params.email });
+    const user = await prisma.user.findUnique({ where: { email: req.params.email } });
     if (!user) {
       return res.status(200).json({ success: false, message: "User not found", url: null });
     }
-    const url = user.profile?.url;
+    const url = user.profileUrl;
     if (!url || url === "url") {
       return res.status(200).json({ success: false, message: "No profile photo", url: null });
     }
@@ -140,10 +135,10 @@ export const getUserPhotoByEmail = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Update User Profile
+
 export const updateUserProfileController = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("+password");
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -153,34 +148,36 @@ export const updateUserProfileController = async (req, res) => {
       return res.status(400).json({ success: false, message: "Current password is required to update profile" });
     }
 
-    const isMatched = await user.comparePassword(req.body.oldPassword);
+    const isMatched = await bcrypt.compare(req.body.oldPassword, user.password);
     if (!isMatched) {
       return res.status(401).json({ success: false, message: "Incorrect current password" });
     }
 
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-
-    // Store avatar URL directly (no Cloudinary upload)
+    const updateData = {};
+    if (req.body.name) updateData.name = req.body.name;
+    if (req.body.email) updateData.email = req.body.email;
     if (req.body.avatar) {
-      user.profile = {
-        public_id: "local",
-        url: req.body.avatar, // base64 data URL
-      };
+      updateData.profilePublicId = "local";
+      updateData.profileUrl = req.body.avatar;
     }
 
-    await user.save();
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+    });
+
+    const { password: _, ...userData } = updatedUser;
 
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: userData,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Update Password
+
 export const updatePasswordController = async (req, res) => {
   try {
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
@@ -189,29 +186,29 @@ export const updatePasswordController = async (req, res) => {
       return res.status(400).json({ success: false, message: "All password fields are required" });
     }
 
-    const user = await User.findById(req.user._id).select("+password");
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
-    // 1. Verify current password is correct
-    const isMatched = await user.comparePassword(oldPassword);
+    const isMatched = await bcrypt.compare(oldPassword, user.password);
     if (!isMatched) {
       return res.status(401).json({ success: false, message: "Incorrect current password" });
     }
 
-    // 2. THE NEW CHECK: Prevent using the same password again
     if (oldPassword === newPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "New password cannot be the same as your current password. Please choose a different one." 
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be the same as your current password. Please choose a different one.",
       });
     }
 
-    // 3. Confirm match
     if (newPassword !== confirmNewPassword) {
       return res.status(400).json({ success: false, message: "Passwords do not match" });
     }
 
-    user.password = newPassword;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { password: hashedPassword },
+    });
 
     res.status(200).json({ success: true, message: "Password updated successfully" });
   } catch (error) {
@@ -219,15 +216,10 @@ export const updatePasswordController = async (req, res) => {
   }
 };
 
-// Delete User Account
 export const deleteUserProfileController = async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.user.id } });
 
-    try {
-    // user = await User.findByIdAndDelete(req.params.id);
-
-    let user = await User.findByIdAndDelete(req.user._id);
-
-    // Clear cookie if you use them
     res.cookie("token", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
@@ -239,7 +231,6 @@ export const deleteUserProfileController = async (req, res) => {
   }
 };
 
-// Logout
 export const logoutUser = async (req, res) => {
   try {
     res.cookie("token", null, {
@@ -253,11 +244,9 @@ export const logoutUser = async (req, res) => {
   }
 };
 
-// Reset Password Request (Forgot Password)
-
 export const resetPasswordRequestController = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await prisma.user.findUnique({ where: { email: req.body.email } });
 
     if (!user) {
       return res
@@ -265,8 +254,14 @@ export const resetPasswordRequestController = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const resetToken = user.resetPassword();
-    await user.save({ validateBeforeSave: false });
+    const resetToken = crypto.randomBytes(20).toString("hex");
+    const resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const resetPasswordExpire = new Date(Date.now() + 30 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetPasswordToken, resetPasswordExpire },
+    });
 
     const frontendUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
     const resetPasswordUrl = `${frontendUrl}/password/reset/${resetToken}`;
@@ -285,9 +280,10 @@ export const resetPasswordRequestController = async (req, res) => {
         .json({ success: true, message: `Email sent to: ${user.email}` });
 
     } catch (error) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save({ validateBeforeSave: false });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { resetPasswordToken: null, resetPasswordExpire: null },
+      });
 
       return res.status(500).json({ success: false, message: error.message });
     }
@@ -296,7 +292,7 @@ export const resetPasswordRequestController = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Reset Password
+
 export const resetPasswordController = async (req, res) => {
   try {
     const resetPasswordToken = crypto
@@ -304,9 +300,11 @@ export const resetPasswordController = async (req, res) => {
       .update(req.params.token)
       .digest("hex");
 
-    const user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() },
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken,
+        resetPasswordExpire: { gt: new Date() },
+      },
     });
 
     if (!user) {
@@ -322,16 +320,25 @@ export const resetPasswordController = async (req, res) => {
         .json({ success: false, message: "Passwords do not match" });
     }
 
-    user.password = req.body.password;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
-    await user.save();
-    sendToken(user, 200, res);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpire: null,
+      },
+    });
+
+    const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+    const { password: _, ...userData } = updatedUser;
+    sendToken(userData, 200, res);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 export const contactController = async (req, res) => {
   try {
     const { name, email, subject, message, lat, lng } = req.body;
@@ -339,8 +346,10 @@ export const contactController = async (req, res) => {
       return res.status(400).json({ success: false, message: "Name, email, and message are required" });
     }
 
-    const location = (lat && lng) ? { lat: Number(lat), lng: Number(lng) } : undefined;
-    await ContactMessage.create({ name, email, subject, message, location });
+    const locationData = (lat && lng) ? { lat: Number(lat), lng: Number(lng) } : {};
+    await prisma.contactMessage.create({
+      data: { name, email, subject: subject || "Order Inquiry", message, ...locationData },
+    });
 
     try {
       await sendEmail({
@@ -360,43 +369,46 @@ export const contactController = async (req, res) => {
 
 export const getContactMessages = async (req, res) => {
   try {
-    const messages = await ContactMessage.find().sort({ createdAt: -1 });
+    const messages = await prisma.contactMessage.findMany({
+      orderBy: { createdAt: "desc" },
+    });
     res.status(200).json({ success: true, messages });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-export const getAllUsers = async (req,res) => {
-    try {
-        const users = await User.find();
-        if(!users){
-            return res.status(400).json({
-                success : false,
-                message : "Users not found"
-            })
-        }
-
-        return res.status(200).json({
-            success : true,
-            users
-        })
-    } catch (error) {
-        return res.status(500).json({
-            success : false,
-            error
-        })
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany();
+    if (!users || users.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Users not found",
+      });
     }
-}
+
+    const usersWithoutPassword = users.map(({ password, ...u }) => u);
+
+    return res.status(200).json({
+      success: true,
+      users: usersWithoutPassword,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error,
+    });
+  }
+};
+
 export const combineData = async (req, res) => {
   try {
-    // 1. Fetch total counts from database
-    const totalUsers = await User.countDocuments();
-    const totalOrders = await Order.countDocuments();
-    const allProducts = await Product.find({}); // Get all products to calculate stock variables
-    const allOrders = await Order.find({});   // Get all orders to calculate total revenue
+    const totalUsers = await prisma.user.count();
+    const totalOrders = await prisma.order.count();
+    const allProducts = await prisma.product.findMany({ select: { stock: true } });
+    const allOrders = await prisma.order.findMany({ select: { totalPrice: true } });
 
-    // 2. Loop through products to count stock status
     let totalProducts = allProducts.length;
     let outOfStock = 0;
     let lowStock = 0;
@@ -405,7 +417,7 @@ export const combineData = async (req, res) => {
     allProducts.forEach((product) => {
       if (product.stock === 0) {
         outOfStock++;
-      } else if (product.stock <= 5) { // Items with 5 or fewer items are considered "low stock"
+      } else if (product.stock <= 5) {
         lowStock++;
         inStock++;
       } else {
@@ -413,12 +425,10 @@ export const combineData = async (req, res) => {
       }
     });
 
-    // 3. Calculate your grand total revenue safely
     const totalRevenue = allOrders.reduce((accumulator, order) => {
       return accumulator + (order.totalPrice || 0);
     }, 0);
 
-    // 4. Return everything inside a single unified payload matching your frontend keys
     return res.status(200).json({
       success: true,
       totalUsers,
@@ -427,49 +437,39 @@ export const combineData = async (req, res) => {
       totalRevenue,
       outOfStock,
       lowStock,
-      inStock
+      inStock,
     });
-
   } catch (error) {
     console.error("Dashboard error:", error);
     return res.status(500).json({
       success: false,
       message: "Server encountered an error aggregating dashboard cards.",
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 export const updateUserProfile = async (req, res) => {
   try {
     const { name, email, role } = req.body;
     const userId = req.params.id;
 
-    // Find user and update with new data fields
-    // { new: true, runValidators: true } ensures it returns the updated document and checks validation rules
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { name, email, role },
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { name, email, role },
+    });
 
-    // Safety check if user doesn't exist in DB
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User account not found.",
-      });
-    }
+    const { password: _, ...userData } = updatedUser;
 
     res.status(200).json({
       success: true,
       message: "User parameters updated successfully!",
-      user: updatedUser,
+      user: userData,
     });
   } catch (error) {
     console.error("Error in updateUserProfile backend:", error);
-    
-    // Catch duplicate email errors from MongoDB unique index configuration
-    if (error.code === 11000) {
+
+    if (error.code === "P2002") {
       return res.status(400).json({
         success: false,
         message: "This email address is already registered to another account.",
@@ -483,35 +483,30 @@ export const updateUserProfile = async (req, res) => {
   }
 };
 
-// ==========================================
-// 2. DELETE USER ACCOUNT (ADMIN)
-// ==========================================
 export const deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Prevention guard: Stop an admin from accidentally deleting their own account
-    if (req.user && req.user._id.toString() === userId) {
+    if (req.user && req.user.id === userId) {
       return res.status(400).json({
         success: false,
         message: "Security restriction: You cannot delete your own active administrator account.",
       });
     }
 
-    const user = await User.findByIdAndDelete(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User account not found.",
-      });
-    }
+    await prisma.user.delete({ where: { id: userId } });
 
     res.status(200).json({
       success: true,
       message: "User account evicted and deleted from database successfully.",
     });
   } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        message: "User account not found.",
+      });
+    }
     console.error("Error in deleteUser backend:", error);
     res.status(500).json({
       success: false,

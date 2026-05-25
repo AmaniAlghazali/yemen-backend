@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  password            String
+  profilePublicId     String    @default("id")
+  profileUrl          String    @default("url")
+  role                String    @default("user")
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  products Product[]
+  orders   Order[]
+  carts    Cart[]
+  reviews  Review[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  price        Float
+  category     String
+  ratings      Float    @default(0)
+  stock        Int      @default(1)
+  numOfReviews Int      @default(0)
+  userId       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User?         @relation(fields: [userId], references: [id])
+  images     ProductImage[]
+  reviews    Review[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model ProductImage {
+  id        String @id @default(cuid())
+  publicId  String
+  url       String
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  name      String
+  comment   String
+  rating    Float
+  productId String
+  userId    String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+model Order {
+  id               String   @id @default(cuid())
+  shippingAddress  String
+  shippingMobileNo Int
+  shippingCity     String
+  shippingCountry  String
+  shippingZipCode  Int
+  paymentId        String
+  paymentStatus    String
+  taxPrice         Float    @default(0)
+  shippingCost     Float    @default(0)
+  orderStatus      String   @default("Processing")
+  totalPrice       Float
+  paidAt           DateTime
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  name      String
+  price     Float
+  quantity  Int
+  image     String
+  productId String
+  orderId   String
+
+  product Product @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  title     String
+  price     Float
+  image     String
+  quantity  Int    @default(1)
+  productId String
+  cartId    String
+
+  product Product @relation(fields: [productId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+}
+
+model Store {
+  id              String   @id @default(cuid())
+  storeName       String   @default("Yemen Marketplace")
+  currency        String   @default("USD")
+  taxRate         Float    @default(5)
+  maintenanceMode Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String   @default("Order Inquiry")
+  message   String
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

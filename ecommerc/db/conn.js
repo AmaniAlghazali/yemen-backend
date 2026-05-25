@@ -1,8 +1,10 @@
-import mongoose from "mongoose";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 const Connection = async () => {
   try {
-    await mongoose.connect(process.env.DB_URL);
+    await prisma.$connect();
     console.log("Connection successful");
   } catch (error) {
     console.log(error);
@@ -10,6 +12,4 @@ const Connection = async () => {
 };
 
 export default Connection;
-
-//hHN1oOWXFR7fz20X
-//amanialghazali14_db_user
+export { prisma };

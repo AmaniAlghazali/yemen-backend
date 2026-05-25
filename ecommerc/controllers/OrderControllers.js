@@ -1,6 +1,4 @@
-import Order from "../models/orderModel.js";
-import Product from "../models/productModel.js";
-import Cart from "../models/cartModel.js";
+import { prisma } from "../db/conn.js";
 import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
 
 export const createOrderController = async (req, res, next) => {
@@ -23,41 +21,37 @@ export const createOrderController = async (req, res, next) => {
       });
     }
 
-    const orderItems = items.map((item) => ({
-      name: item.title || item.name,
-      price: Number(item.price),
-      quantity: Number(item.quantity),
-      image: item.image || "https://placehold.co/400",
-      product: item.productId || item.product,
-    }));
-
-    const orderData = {
-      shippingInfo: {
-        address: shippingInfo.address,
-        mobileNo: Number(shippingInfo.mobileNo),
-        city: shippingInfo.city,
-        country: shippingInfo.country,
-        zipCode: Number(shippingInfo.zipCode),
+    const order = await prisma.order.create({
+      data: {
+        shippingAddress: shippingInfo.address,
+        shippingMobileNo: Number(shippingInfo.mobileNo),
+        shippingCity: shippingInfo.city,
+        shippingCountry: shippingInfo.country,
+        shippingZipCode: Number(shippingInfo.zipCode),
+        paymentId: paymentId || `pay_mock_${Date.now()}`,
+        paymentStatus: paymentStatus || "succeeded",
+        taxPrice: Number(taxPrice) || 0,
+        shippingCost: Number(shippingCost) || 0,
+        totalPrice: Number(totalPrice) || 0,
+        orderStatus: orderStatus || "Processing",
+        paidAt: new Date(),
+        userId: req.user.id,
+        items: {
+          create: items.map((item) => ({
+            name: item.title || item.name,
+            price: Number(item.price),
+            quantity: Number(item.quantity),
+            image: item.image || "https://placehold.co/400",
+            productId: item.productId || item.product,
+          })),
+        },
       },
-      orderItems,
-      paymentInfo: {
-        id: paymentId || `pay_mock_${Date.now()}`,
-        status: paymentStatus || "succeeded",
-      },
-      taxPrice: Number(taxPrice) || 0,
-      shippingCost: Number(shippingCost) || 0,
-      totalPrice: Number(totalPrice) || 0,
-      orderStatus: orderStatus || "Processing",
-      paidAt: new Date(),
-      user: req.user._id,
-    };
+      include: { items: true },
+    });
 
-    const order = await Order.create(orderData);
-
-    await Cart.findOneAndUpdate(
-      { user: req.user._id },
-      { $set: { items: [] } }
-    );
+    await prisma.cartItem.deleteMany({
+      where: { cart: { userId: req.user.id } },
+    });
 
     res.status(201).json({
       success: true,
@@ -71,12 +65,16 @@ export const createOrderController = async (req, res, next) => {
     });
   }
 };
+
 export const getSingleOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate(
-      "user",
-      "name email",
-    );
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: true,
+      },
+    });
     if (!order) {
       return res.status(400).json({
         success: false,
@@ -94,10 +92,14 @@ export const getSingleOrder = async (req, res) => {
     });
   }
 };
+
 export const myOrderDetails = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user._id });
-    if (!orders) {
+    const orders = await prisma.order.findMany({
+      where: { userId: req.user.id },
+      include: { items: true },
+    });
+    if (!orders || orders.length === 0) {
       return res.status(400).json({
         success: false,
         message: "No orders found for this user",
@@ -114,10 +116,15 @@ export const myOrderDetails = async (req, res) => {
     });
   }
 };
+
 export const getAllOrders = async (req, res) => {
   try {
-    // ✅ CHANGE THIS LINE: Add .populate("user", "name email")
-    const orders = await Order.find().populate("user", "name email");
+    const orders = await prisma.order.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: true,
+      },
+    });
 
     if (!orders || orders.length === 0) {
       return res.status(400).json({
@@ -144,52 +151,56 @@ export const getAllOrders = async (req, res) => {
     });
   }
 };
+
 export const updateOrderStatus = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: true },
+    });
 
     if (!order) {
       return res
         .status(404)
         .json({ success: false, message: "Order not found" });
     }
+
     if (req.body.status === "Delivered" && order.orderStatus !== "Delivered") {
-      for (const item of order.orderItems) {
-        await updatestock(item.product, item.quantity);
+      for (const item of order.items) {
+        await updateStock(item.productId, item.quantity);
       }
-      order.deliveredAt = Date.now();
     }
 
-    // ✅ This allows you to change it to "Pending" or anything else
-    order.orderStatus = req.body.status;
-
-    await order.save({ validateBeforeSave: false });
+    await prisma.order.update({
+      where: { id: req.params.id },
+      data: { orderStatus: req.body.status },
+    });
 
     return res.status(200).json({
       success: true,
       message: "Order status updated successfully",
-      order,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-async function updatestock(id, quantity) {
-  const product = await Product.findById(id);
-
+async function updateStock(productId, quantity) {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) throw new Error("Product not found");
-
-  // Ensure we use the correct property name from your Schema (likely 'stock')
   if (product.stock < quantity) throw new Error("Insufficient stock");
 
-  product.stock -= quantity;
-  await product.save({ validateBeforeSave: false });
+  await prisma.product.update({
+    where: { id: productId },
+    data: { stock: product.stock - quantity },
+  });
 }
 
 export const deleteOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+    });
     if (!order) {
       return res
         .status(404)
@@ -203,7 +214,7 @@ export const deleteOrder = async (req, res) => {
       });
     }
 
-    await Order.deleteOne({ _id: req.params.id });
+    await prisma.order.delete({ where: { id: req.params.id } });
     return res.status(200).json({
       success: true,
       message: "Order deleted successfully",
@@ -211,70 +222,73 @@ export const deleteOrder = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Internal server error: " + error.message, // ✅ Fixed 'err' to 'error'
+      message: "Internal server error: " + error.message,
     });
   }
 };
+
 export const updateOrderelement = async (req, res, next) => {
   try {
     const orderId = req.params.id;
 
-    const { 
-      address, 
-      mobileNo, 
-      city, 
-      country, 
-      zipCode, 
-      taxPrice, 
-      shippingCost, 
+    const {
+      address,
+      mobileNo,
+      city,
+      country,
+      zipCode,
+      taxPrice,
+      shippingCost,
       totalPrice,
-      existingImageUrl 
+      existingImageUrl,
     } = req.body;
 
-    // 2. Update this block to use your custom uploadToCloudinary wrapper function
-    let finalImageUrl = existingImageUrl; 
+    let finalImageUrl = existingImageUrl;
     if (req.file) {
-      // Pass the temporary file path and the destination folder name ("orders")
       const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "orders");
-      finalImageUrl = result.secure_url; // Secure URL returned by Cloudinary
+      finalImageUrl = result.secure_url;
     }
 
-    // 3. Reconstruct and update the database document
-    const updatedData = {
-      shippingInfo: {
-        address,
-        mobileNo: Number(mobileNo),
-        city,
-        country,
-        zipCode: Number(zipCode),
-      },
-      taxPrice: Number(taxPrice),
-      shippingCost: Number(shippingCost),
-      totalPrice: Number(totalPrice),
-    };
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
 
-    const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    if (order.orderItems && order.orderItems.length > 0) {
-      order.orderItems[0].image = finalImageUrl;
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        shippingAddress: address,
+        shippingMobileNo: Number(mobileNo),
+        shippingCity: city,
+        shippingCountry: country,
+        shippingZipCode: Number(zipCode),
+        taxPrice: Number(taxPrice),
+        shippingCost: Number(shippingCost),
+        totalPrice: Number(totalPrice),
+      },
+    });
+
+    if (finalImageUrl && order.items.length > 0) {
+      await prisma.orderItem.update({
+        where: { id: order.items[0].id },
+        data: { image: finalImageUrl },
+      });
     }
 
-    order.shippingInfo = updatedData.shippingInfo;
-    order.taxPrice = updatedData.taxPrice;
-    order.shippingCost = updatedData.shippingCost;
-    order.totalPrice = updatedData.totalPrice;
-
-    await order.save();
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
 
     res.status(200).json({
       success: true,
       message: "Order updated successfully",
-      order,
+      order: updatedOrder,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,

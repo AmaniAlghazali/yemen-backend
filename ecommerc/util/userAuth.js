@@ -1,16 +1,15 @@
 import jwt from "jsonwebtoken";
-import User from "../models/userModel.js";
+import { prisma } from "../db/conn.js";
 
 export const isAuthenticatedUser = async (req, res, next) => {
   try {
-  const token =
-  req.cookies?.token ||
-  req.headers.authorization?.split(" ")[1];
+    const token =
+      req.cookies?.token ||
+      req.headers.authorization?.split(" ")[1];
     if (!token) return res.status(401).json({ message: "No token found" });
 
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = await User.findById(decodedData.id);
+    req.user = await prisma.user.findUnique({ where: { id: decodedData.id } });
 
     next();
   } catch (error) {
