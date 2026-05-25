@@ -99,41 +99,47 @@ const ViewAllProduct = () => {
     }
   };
 
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
-      const formData = new FormData();
-      formData.append("title", productFormData.title);
-      formData.append("description", productFormData.description);
-      formData.append("price", productFormData.price);
-      formData.append("stock", productFormData.stock);
-      formData.append("category", productFormData.category);
+      const payload = {
+        title: productFormData.title,
+        description: productFormData.description,
+        price: productFormData.price,
+        stock: productFormData.stock,
+        category: productFormData.category,
+      };
 
       if (images && !Array.isArray(images)) {
-        formData.append("image", images);
+        payload.image = await fileToBase64(images);
       }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      };
 
       if (editingProduct) {
         await axios.put(
           `${API_URL}/products/update-product/${editingProduct._id}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-            withCredentials: true,
-          },
+          payload,
+          config,
         );
         toast.success("Product Updated");
       } else {
-        await axios.post(`${API_URL}/products/create-product`, formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-          withCredentials: true,
-        });
+        await axios.post(`${API_URL}/products/create-product`, payload, config);
         toast.success("Product Added");
       }
 

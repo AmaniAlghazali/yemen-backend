@@ -2,15 +2,15 @@ import { prisma } from "../db/conn.js";
 import ApiFeatures from "../util/ApiFeatures.js";
 import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
 
+const base64ToBuffer = (dataUrl) => {
+  const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+  if (!matches) return null;
+  return Buffer.from(matches[2], "base64");
+};
+
 export const createProducts = async (req, res) => {
   try {
-    const { title, description, price, stock, category } = req.body;
-
-    let imageData = null;
-    if (req.file) {
-      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
-      imageData = { publicId: result.public_id, url: result.secure_url };
-    }
+    const { title, description, price, stock, category, image } = req.body;
 
     const data = {
       title,
@@ -19,8 +19,13 @@ export const createProducts = async (req, res) => {
       stock: Number(stock) || 1,
       category,
     };
-    if (imageData) {
-      data.images = { create: [{ publicId: imageData.publicId, url: imageData.url }] };
+
+    if (image) {
+      const buffer = base64ToBuffer(image);
+      if (buffer) {
+        const result = await uploadToCloudinaryFromBuffer(buffer, "products");
+        data.images = { create: [{ publicId: result.public_id, url: result.secure_url }] };
+      }
     }
 
     const product = await prisma.product.create({
@@ -93,7 +98,7 @@ export const getProductDetail = async (req, res) => {
 
 export const updateProductController = async (req, res) => {
   try {
-    const { title, description, price, stock, category } = req.body;
+    const { title, description, price, stock, category, image } = req.body;
     const existing = await prisma.product.findUnique({
       where: { id: req.params.id },
     });
@@ -110,12 +115,15 @@ export const updateProductController = async (req, res) => {
       category,
     };
 
-    if (req.file) {
-      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
-      await prisma.productImage.deleteMany({ where: { productId: existing.id } });
-      await prisma.productImage.create({
-        data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
-      });
+    if (image) {
+      const buffer = base64ToBuffer(image);
+      if (buffer) {
+        const result = await uploadToCloudinaryFromBuffer(buffer, "products");
+        await prisma.productImage.deleteMany({ where: { productId: existing.id } });
+        await prisma.productImage.create({
+          data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
+        });
+      }
     }
 
     const product = await prisma.product.update({

@@ -9,8 +9,10 @@ export const isAuthenticatedUser = async (req, res, next) => {
     if (!token) return res.status(401).json({ message: "No token found" });
 
     const decodedData = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await prisma.user.findUnique({ where: { id: decodedData.id } });
+    const user = await prisma.user.findUnique({ where: { id: decodedData.id } });
+    if (!user) return res.status(401).json({ success: false, message: "User not found" });
 
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Auth Failed" });
@@ -19,7 +21,7 @@ export const isAuthenticatedUser = async (req, res, next) => {
 
 export const isAdmin = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(400).json({
         success: false,
         message: "You are not an admin, not allowed to access this",

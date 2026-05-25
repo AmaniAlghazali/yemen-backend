@@ -29,7 +29,9 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-Connection();
+Connection().catch((err) => {
+  console.error("Database connection failed:", err);
+});
 
 app.use("/api/v1/products", productsRouter);
 app.use("/api/v1/users", userRouter);
@@ -46,6 +48,11 @@ app.use((req, res) => {
     return res.status(404).json({ success: false, message: "API route not found" });
   }
   res.status(404).json({ success: false, message: "Route not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled Error:", err);
+  res.status(500).json({ success: false, message: "Internal Server Error" });
 });
 
 export default app;

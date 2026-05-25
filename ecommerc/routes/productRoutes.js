@@ -1,5 +1,4 @@
 import express from "express";
-import upload from "../util/multer.js";
 import {
   createProducts,
   deleteProductController,
@@ -11,12 +10,10 @@ import { isAdmin, isAuthenticatedUser } from "../util/userAuth.js";
 
 const productsRouter = express.Router();
 
-// --- FIXED: Added upload.single("image") middleware here ---
 productsRouter.post(
   "/create-product",
   isAuthenticatedUser,
   isAdmin("admin"),
-  upload.single("image"), 
   createProducts
 );
 
@@ -27,7 +24,6 @@ productsRouter.put(
   "/update-product/:id", 
   isAuthenticatedUser,
   isAdmin("admin"),
-  upload.single("image"),
   updateProductController
 );
 

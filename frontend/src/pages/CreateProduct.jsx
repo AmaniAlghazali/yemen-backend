@@ -54,28 +54,28 @@ const CreateProduct = () => {
     }
 
     try {
-        const formPayload = new FormData();
-        formPayload.append("title", formData.title);
-        formPayload.append("description", formData.description);
-        formPayload.append("price", Number(formData.price));
-        formPayload.append("category", formData.category);
-        formPayload.append("stock", Number(formData.stock));
+        const payload = {
+            title: formData.title,
+            description: formData.description,
+            price: Number(formData.price),
+            category: formData.category,
+            stock: Number(formData.stock),
+        };
 
-        const imageInput = document.querySelector('input[type="file"]');
-        if (imageInput?.files[0]) {
-            formPayload.append("image", imageInput.files[0]);
+        if (formData.image) {
+            payload.image = formData.image;
         }
 
         const config = {
             headers: {
                 Authorization: `Bearer ${token}`,
-                "Content-Type": "multipart/form-data",
+                "Content-Type": "application/json",
             },
         };
 
         const res = await axios.post(
             "/api/v1/products/create-product", 
-            formPayload, 
+            payload, 
             config 
         );
         console.log(res);
