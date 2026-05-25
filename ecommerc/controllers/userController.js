@@ -454,9 +454,14 @@ export const updateUserProfile = async (req, res) => {
     const { name, email, role } = req.body;
     const userId = req.params.id;
 
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (email !== undefined) data.email = email;
+    if (role !== undefined) data.role = role;
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { name, email, role },
+      data,
     });
 
     const { password: _, ...userData } = updatedUser;
