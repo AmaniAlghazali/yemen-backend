@@ -63,15 +63,34 @@ const UpdateProfile = () => {
     fetchUser();
   }, [navigate]);
 
-  const handleImageChange = (e) => {
+  const compressImage = (file, maxW = 300, quality = 0.7) =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ratio = Math.min(maxW / img.width, maxW / img.height, 1);
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAvatarPreview(reader.result);
-      setAvatar(reader.result);
-    };
-    reader.readAsDataURL(file);
+    toast.info("Compressing image...", { autoClose: 1500 });
+    const compressed = await compressImage(file, 280, 0.6);
+    setAvatarPreview(compressed);
+    setAvatar(compressed);
   };
 
   const validatePassword = (password) => {
