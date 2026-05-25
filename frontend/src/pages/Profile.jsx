@@ -21,7 +21,12 @@ const Profile = () => {
         const { data } = await axios.get("/api/v1/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (data.success) setUser(data.user);
+        if (data.success) {
+          setUser(data.user);
+          if (data.user.profileUrl && data.user.profileUrl !== "url") {
+            localStorage.setItem("userAvatar", data.user.profileUrl);
+          }
+        }
       } catch {
         navigate("/login");
       } finally {

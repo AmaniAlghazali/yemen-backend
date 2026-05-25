@@ -51,7 +51,13 @@ const Navbar = () => {
       axios.get("/api/v1/users/profile", {
         headers: { Authorization: `Bearer ${token}` },
       }).then(({ data }) => {
-        if (data.success) setUserName(data.user.name);
+        if (data.success) {
+          setUserName(data.user.name);
+          const url = data.user.profileUrl;
+          if (url && url !== "url") {
+            localStorage.setItem("userAvatar", url);
+          }
+        }
       }).catch(() => {});
     }
   }, [token]);
