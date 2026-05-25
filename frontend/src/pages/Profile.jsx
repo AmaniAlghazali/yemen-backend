@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'; // Added useCallback
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useNavigate, Link } from 'react-router-dom';
@@ -8,44 +8,36 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 1. Wrap in useCallback to stabilize the function reference
-  const handleLogout = useCallback(() => {
-    Cookies.remove("token");
-    navigate("/login");
-  }, [navigate]);
+  const getToken = () => Cookies.get("token") || localStorage.getItem("token");
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const token = Cookies.get("token");
-
+      const token = getToken();
       if (!token) {
-        handleLogout(); // Use handleLogout here for consistency
+        navigate("/login");
         return;
       }
-
       try {
         const { data } = await axios.get("/api/v1/users/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Full User Data from Backend:", data.user);
         if (data.success) {
           setUser(data.user);
-          if (data.user.profile?.url && data.user.profile.url !== "url") {
-            localStorage.setItem("userAvatar", data.user.profile.url);
-          }
         }
       } catch (error) {
-        console.error("Profile Error:", error.response?.data?.message || error.message);
-        handleLogout();
+        navigate("/login");
       } finally {
         setLoading(false);
       }
     };
-
     fetchProfile();
+  }, [navigate]);
 
-    // 2. Add dependencies to satisfy ESLint
-  }, [handleLogout, navigate]);
+  const handleLogout = () => {
+    Cookies.remove("token");
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
 
   if (loading) {
     return (
@@ -54,46 +46,104 @@ const Profile = () => {
       </div>
     );
   }
-
   if (!user) return null;
 
+  const avatarSrc =
+    user.profileUrl && user.profileUrl !== "url"
+      ? user.profileUrl
+      : "https://api.dicebear.com/7.x/avataaars/svg";
+
+  const stats = [
+    { label: "Orders", value: user.ordersCount ?? "—" },
+    { label: "Wishlist", value: user.wishlistCount ?? "—" },
+    { label: "Joined", value: new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) },
+  ];
+
   return (
-    <div className="max-w-md mx-auto mt-10 p-8 bg-base-100 rounded-[2.5rem] shadow-2xl border border-base-300 relative">
-      <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
-
-      <div className="flex flex-col items-center">
-        <div className="avatar mb-6">
-          <div className="w-32 h-32 rounded-full ring ring-primary ring-offset-2">
-            <img
-              src={user?.profile?.url && user.profile.url !== "url" ? user.profile.url : "https://api.dicebear.com/7.x/avataaars/svg"}
-              alt="Profile"
-              className="object-cover"
-              onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg" }}
-            />
+    <div className="min-h-screen bg-base-200 py-6 md:py-10 px-4">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter">
+              Profile
+            </h1>
+            <p className="text-xs md:text-sm opacity-50 font-medium mt-1">
+              Your account overview
+            </p>
           </div>
         </div>
 
-        <h2 className="text-3xl font-black tracking-tighter uppercase">{user.name}</h2>
-        <span className="badge badge-primary badge-sm font-bold mb-6">{user.role}</span>
-
-        <div className="w-full space-y-4 bg-base-200 p-6 rounded-2xl mb-6">
-          <div>
-            <p className="text-[10px] font-bold opacity-40 uppercase">Email</p>
-            <p className="font-semibold">{user.email}</p>
+        {/* Profile Card */}
+        <div className="bg-base-100 rounded-2xl border border-base-300 shadow-sm p-6 md:p-8">
+          {/* Avatar & Name */}
+          <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-base-200">
+            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full ring-2 ring-primary/20 ring-offset-2 overflow-hidden mb-4">
+              <img
+                src={avatarSrc}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "https://api.dicebear.com/7.x/avataaars/svg";
+                }}
+              />
+            </div>
+            <h2 className="text-xl md:text-2xl font-black tracking-tight uppercase">
+              {user.name}
+            </h2>
+            <span className="badge badge-primary badge-sm font-bold mt-1">
+              {user.role}
+            </span>
           </div>
-          <div>
-            <p className="text-[10px] font-bold opacity-40 uppercase">Joined</p>
-            <p className="font-semibold">{new Date(user.createdAt).toLocaleDateString()}</p>
-          </div>
-        </div>
 
-        <div className="flex flex-col w-full gap-3">
-          <Link to="/update-profile" className="btn btn-primary rounded-2xl font-bold uppercase">
-            Edit Profile
-          </Link>
-          <button onClick={handleLogout} className="btn btn-ghost btn-sm text-error font-bold uppercase">
-            Logout
-          </button>
+          {/* Info */}
+          <div className="bg-base-200/50 rounded-xl p-4 space-y-3 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold opacity-40 uppercase tracking-wider">
+                Email
+              </span>
+              <span className="text-sm font-semibold truncate ml-4">{user.email}</span>
+            </div>
+            {user.phone && (
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold opacity-40 uppercase tracking-wider">
+                  Phone
+                </span>
+                <span className="text-sm font-semibold">{user.phone}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="bg-base-200/50 rounded-xl p-3 text-center"
+              >
+                <p className="text-lg font-black">{stat.value}</p>
+                <p className="text-[10px] font-bold opacity-40 uppercase tracking-wider mt-0.5">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2">
+            <Link
+              to="/update-profile"
+              className="btn btn-primary rounded-xl font-bold uppercase tracking-wider h-11"
+            >
+              Edit Profile
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="btn btn-ghost rounded-xl font-bold uppercase tracking-wider h-11 text-error"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
     </div>
