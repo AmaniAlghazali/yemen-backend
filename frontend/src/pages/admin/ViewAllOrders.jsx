@@ -97,7 +97,7 @@ const ViewAllOrders = () => {
   const openEditModal = (order) => {
     let currentImage = "https://placehold.co/400";
 
-    const firstItem = order.orderItems?.[0];
+    const firstItem = order.items?.[0];
 
     if (
       firstItem?.image &&
@@ -110,11 +110,11 @@ const ViewAllOrders = () => {
     setEditingOrderId(order.id);
 
     setEditOrderFormData({
-      address: order.shippingInfo?.address || "",
-      mobileNo: order.shippingInfo?.mobileNo || "",
-      city: order.shippingInfo?.city || "",
-      country: order.shippingInfo?.country || "",
-      zipCode: order.shippingInfo?.zipCode || "",
+      address: order.shippingAddress || "",
+      mobileNo: order.shippingMobileNo || "",
+      city: order.shippingCity || "",
+      country: order.shippingCountry || "",
+      zipCode: order.shippingZipCode || "",
       taxPrice: order.taxPrice || "",
       shippingCost: order.shippingCost || "",
       totalPrice: order.totalPrice || "",
@@ -543,7 +543,7 @@ const ViewAllOrders = () => {
                   <div>
                     <h3 className="font-bold text-lg mb-4">Products</h3>
 
-                    {order.orderItems?.map((item) => (
+                    {order.items?.map((item) => (
                       <div
                         key={item.id}
                         className="flex items-center gap-4 border rounded-xl p-3 mb-3"
@@ -576,23 +576,23 @@ const ViewAllOrders = () => {
 
                     <div className="space-y-2">
                       <p>
-                        <b>Address:</b> {order.shippingInfo?.address}
+                        <b>Address:</b> {order.shippingAddress}
                       </p>
 
                       <p>
-                        <b>City:</b> {order.shippingInfo?.city}
+                        <b>City:</b> {order.shippingCity}
                       </p>
 
                       <p>
-                        <b>Country:</b> {order.shippingInfo?.country}
+                        <b>Country:</b> {order.shippingCountry}
                       </p>
 
                       <p>
-                        <b>Zip:</b> {order.shippingInfo?.zipCode}
+                        <b>Zip:</b> {order.shippingZipCode}
                       </p>
 
                       <p>
-                        <b>Mobile:</b> {order.shippingInfo?.mobileNo}
+                        <b>Mobile:</b> {order.shippingMobileNo}
                       </p>
                     </div>
                   </div>
