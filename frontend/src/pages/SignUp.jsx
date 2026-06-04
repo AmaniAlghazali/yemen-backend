@@ -41,7 +41,7 @@ const SignUp = () => {
             const token = response.data.token;
             
             Cookies.set("token", token, { expires: 7, secure: false });
-            navigate("/login");
+            navigate("/");
         } catch (error) {
             const backendMessage = error.response?.data?.message || "Registration Failed";
             toast.error(backendMessage);

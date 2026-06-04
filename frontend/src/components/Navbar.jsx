@@ -78,7 +78,7 @@ const Navbar = () => {
           </div>
           <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-1 p-2 shadow-2xl bg-base-100 rounded-2xl w-52 border border-base-200">
             <li><Link to="/">Home</Link></li>
-            <li><Link to="/create-product">Add Product</Link></li>
+            <li><Link to="/create-product">Products</Link></li>
             <li><Link to="/about">About Us</Link></li>
             <li><Link to="/contact">Contact</Link></li>
           </ul>

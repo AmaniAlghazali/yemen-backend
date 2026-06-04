@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { useStore } from "../context/StoreContext";
 import { getCurrencySymbol } from "../utils/currency";
+
+const ITEMS_PER_PAGE = 15;
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200",
@@ -15,6 +17,8 @@ const Home = () => {
   const { store } = useStore();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [minPrice, setMinPrice] = useState("");
@@ -31,44 +35,41 @@ const Home = () => {
   ];
 
   useEffect(() => {
-    const getAllProducts = async () => {
+    const fetchProducts = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-        const response = await axios.get("/api/v1/products/get-all-products", {
-          headers: { Authorization: token ? `Bearer ${token}` : "" }
+        const params = new URLSearchParams({ page });
+        if (searchTerm) params.set("keyword", searchTerm);
+        if (selectedCategory !== "All") params.set("category", selectedCategory);
+        if (minPrice) params.set("price[gte]", minPrice);
+        if (maxPrice) params.set("price[lte]", maxPrice);
+        const res = await axios.get(`/api/v1/products/get-all-products?${params}`, {
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
         });
-        if (response.data && response.data.products) {
-          setProducts(response.data.products);
-        } else if (Array.isArray(response.data)) {
-          setProducts(response.data);
+        if (res.data.success) {
+          setProducts(res.data.products || []);
+          setTotalCount(res.data.totalCount || 0);
         }
       } catch (error) {
         console.error("API Error:", error);
+        setProducts([]);
+        setTotalCount(0);
       } finally {
         setLoading(false);
       }
     };
-    getAllProducts();
-  }, []);
+    fetchProducts();
+  }, [page, searchTerm, selectedCategory, minPrice, maxPrice]);
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch = product.title?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === "All" ||
-        product.category?.toLowerCase() === selectedCategory.toLowerCase();
-      const price = Number(product.price);
-      const matchesMin = minPrice === "" || price >= Number(minPrice);
-      const matchesMax = maxPrice === "" || price <= Number(maxPrice);
-      return matchesSearch && matchesCategory && matchesMin && matchesMax;
-    });
-  }, [products, searchTerm, selectedCategory, minPrice, maxPrice]);
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("All");
     setMinPrice("");
     setMaxPrice("");
+    setPage(1);
   };
 
   return (
@@ -139,7 +140,9 @@ const Home = () => {
               <div>
                 <h1 className='text-3xl md:text-5xl font-black text-base-content'>Our Collection</h1>
                 <p className="text-base-content/60 mt-2 text-sm md:text-base">
-                  Showing {filteredProducts.length} items
+                  {totalCount > 0
+                    ? `Showing page ${page} of ${totalPages} (${totalCount} products)`
+                    : loading ? "Loading..." : "0 products"}
                 </p>
               </div>
             </div>
@@ -149,21 +152,47 @@ const Home = () => {
                 <span className="loading loading-spinner loading-lg text-primary"></span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))
-                ) : (
-                  <div className="col-span-full py-20 text-center bg-base-200 rounded-3xl border-2 border-dashed border-base-300">
-                    <p className="text-5xl mb-4">📦</p>
-                    <p className="text-xl font-bold opacity-40">No items match your filters.</p>
-                    <button onClick={resetFilters} className="btn btn-primary btn-sm mt-4">
-                      Clear Filters
-                    </button>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
+                  {products.length > 0 ? (
+                    products.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))
+                  ) : (
+                    <div className="col-span-full py-20 text-center bg-base-200 rounded-3xl border-2 border-dashed border-base-300">
+                      <p className="text-5xl mb-4">📦</p>
+                      <p className="text-xl font-bold opacity-40">No items match your filters.</p>
+                      <button onClick={resetFilters} className="btn btn-primary btn-sm mt-4">
+                        Clear Filters
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-8 p-4 bg-base-200 rounded-2xl">
+                    <span className="text-sm text-base-content/60">
+                      Page {page} of {totalPages}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="btn btn-sm btn-outline rounded-xl"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="btn btn-sm btn-outline rounded-xl"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 )}
-              </div>
+              </>
             )}
           </main>
         </div>

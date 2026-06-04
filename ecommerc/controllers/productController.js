@@ -25,6 +25,8 @@ export const createProducts = async (req, res) => {
       if (buffer) {
         const result = await uploadToCloudinaryFromBuffer(buffer, "products");
         data.images = { create: [{ publicId: result.public_id, url: result.secure_url }] };
+      } else if (image.startsWith("http://") || image.startsWith("https://")) {
+        data.images = { create: [{ publicId: "url-direct", url: image }] };
       }
     }
 
@@ -56,18 +58,15 @@ export const getAllProducts = async (req, res) => {
       .filter()
       .pagination();
 
-    const products = await prisma.product.findMany(queryArgs);
-
-    if (!products || products.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No products found matching that criteria",
-      });
-    }
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany(queryArgs),
+      prisma.product.count({ where: queryArgs.where }),
+    ]);
 
     return res.status(200).json({
       success: true,
       count: products.length,
+      totalCount,
       products,
     });
   } catch (error) {
@@ -122,6 +121,11 @@ export const updateProductController = async (req, res) => {
         await prisma.productImage.deleteMany({ where: { productId: existing.id } });
         await prisma.productImage.create({
           data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
+        });
+      } else if (image.startsWith("http://") || image.startsWith("https://")) {
+        await prisma.productImage.deleteMany({ where: { productId: existing.id } });
+        await prisma.productImage.create({
+          data: { publicId: "url-direct", url: image, productId: existing.id },
         });
       }
     }

@@ -25,7 +25,6 @@ export const StoreProvider = ({ children }) => {
           });
         }
       } catch {
-        console.warn("Could not load store settings, using defaults");
       } finally {
         setLoading(false);
       }

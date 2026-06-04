@@ -24,11 +24,15 @@ const ViewAllProduct = () => {
   const [products, setProducts] = useState([]);
   const [images, setImages] = useState([]);
   const [imagePreview, setImagePreview] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
   // Search Query State
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const ITEMS_PER_PAGE = 15;
 
   const CATEGORY_OPTIONS = [
     "Electronics", "Clothing", "Food", "Books",
@@ -59,13 +63,14 @@ const ViewAllProduct = () => {
   const fetchProducts = useCallback(async () => {
     try {
       const res = await axios.get(
-        `${API_URL}/products/get-all-products`,
+        `${API_URL}/products/get-all-products?page=${page}`,
         getAuthHeader(),
       );
       if (res.data.success) {
         setProducts(res.data.products || []);
+        setTotalCount(res.data.totalCount || 0);
         setProductStats({
-          total: res.data.count || res.data.products?.length || 0,
+          total: res.data.totalCount || 0,
           lowStock: (res.data.products || []).filter((p) => p.stock < 20)
             .length,
         });
@@ -73,7 +78,7 @@ const ViewAllProduct = () => {
     } catch (error) {
       console.log(error);
     }
-  }, [getAuthHeader]);
+  }, [getAuthHeader, page]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,7 +95,11 @@ const ViewAllProduct = () => {
     if (name === "image") {
       const file = files[0];
       setImages(file);
-      setImagePreview(URL.createObjectURL(file));
+      setImageUrl("");
+      if (file) setImagePreview(URL.createObjectURL(file));
+    } else if (name === "imageUrl") {
+      setImageUrl(value);
+      if (value) { setImages(null); setImagePreview(value); }
     } else {
       setProductFormData({
         ...productFormData,
@@ -119,7 +128,9 @@ const ViewAllProduct = () => {
         category: productFormData.category,
       };
 
-      if (images && !Array.isArray(images)) {
+      if (imageUrl) {
+        payload.image = imageUrl;
+      } else if (images && !Array.isArray(images)) {
         payload.image = await fileToBase64(images);
       }
 
@@ -162,6 +173,7 @@ const ViewAllProduct = () => {
     });
     setImages([]);
     setImagePreview("");
+    setImageUrl("");
   };
 
   const handleAddProduct = () => {
@@ -418,6 +430,30 @@ const ViewAllProduct = () => {
               </table>
             </div>
           </div>
+
+          {Math.ceil(totalCount / ITEMS_PER_PAGE) > 1 && (
+            <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl shadow-sm border border-base-300">
+              <span className="text-sm text-base-content/60">
+                Page {page} of {Math.ceil(totalCount / ITEMS_PER_PAGE)} ({totalCount} products)
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="btn btn-sm btn-outline rounded-lg"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.ceil(totalCount / ITEMS_PER_PAGE), p + 1))}
+                  disabled={page === Math.ceil(totalCount / ITEMS_PER_PAGE)}
+                  className="btn btn-sm btn-outline rounded-lg"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
       {/* PRODUCT DIALOG MANAGEMENT MODAL POPUP */}
       {isProductModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -523,7 +559,23 @@ const ViewAllProduct = () => {
               <div className="form-control">
                 <label className="label py-1">
                   <span className="label-text font-semibold text-base-content/80">
-                    Product Image Asset
+                    Image URL
+                  </span>
+                </label>
+                <input
+                  type="url"
+                  name="imageUrl"
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={handleProductInputChange}
+                  className="input input-bordered w-full rounded-xl"
+                />
+              </div>
+              <div className="divider text-xs text-base-content/30">OR</div>
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-semibold text-base-content/80">
+                    Upload File
                   </span>
                 </label>
                 <input
@@ -546,6 +598,7 @@ const ViewAllProduct = () => {
                     type="button"
                     onClick={() => {
                       setImages([]);
+                      setImageUrl("");
                       setImagePreview("");
                     }}
                     className="absolute top-1 right-1 bg-error text-error-content hover:bg-error-active w-6 h-6 rounded-full flex items-center justify-center text-xs shadow transition-colors"

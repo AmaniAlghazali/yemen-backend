@@ -14,7 +14,11 @@ app.use(cors({
     origin: function (origin, callback) {
         if (!origin ||
             origin.startsWith("http://localhost") ||
-            origin.endsWith(".vercel.app")) {
+            origin.startsWith("http://192.168.") ||
+            origin.startsWith("http://10.") ||
+            origin.startsWith("http://172.") ||
+            origin.endsWith(".vercel.app") ||
+            origin.endsWith(".exp.direct")) {
             callback(null, true);
         } else {
             callback(new Error("Not allowed by CORS"));

@@ -3,11 +3,12 @@ import Navbar from "./components/Navbar";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
+import CreateProduct from "./pages/CreateProduct";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ProductDetail from "./pages/ProductDetai";
-import CreateProduct from "./pages/CreateProduct";
+
 import Footer from "./components/Footer";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -60,10 +61,10 @@ const AppContent = () => {
       {!isAdminPage && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/create-product" element={<CreateProduct />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/product-detail/:id" element={<ProductDetail />} />
-        <Route path="/create-product" element={<CreateProduct />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
