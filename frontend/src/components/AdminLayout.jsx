@@ -60,7 +60,9 @@ const AdminLayout = ({ children, title = "Dashboard" }) => {
         if (cached) {
           try {
             setAdmin(JSON.parse(cached));
-          } catch {}
+          } catch {
+            /* empty */
+          }
         }
       } finally {
         setAdminLoading(false);
@@ -75,7 +77,9 @@ const AdminLayout = ({ children, title = "Dashboard" }) => {
       await axios.get(`${API_URL}/users/logout`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch {}
+    } catch {
+      /* empty */
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("userRole");
     localStorage.removeItem("userAvatar");
@@ -113,7 +117,7 @@ const AdminLayout = ({ children, title = "Dashboard" }) => {
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } flex flex-col`}
       >
-        <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-content p-5">
+        <div className="bg-linear-to-br from-primary to-primary/80 text-primary-content p-5">
           <div className="flex items-center gap-3 mb-3">
             {avatarUrl ? (
               <img

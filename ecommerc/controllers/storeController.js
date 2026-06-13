@@ -6,7 +6,11 @@ export const getStoreSettings = async (req, res) => {
     if (!store) {
       store = await prisma.store.create({ data: {} });
     }
-    res.status(200).json({ success: true, store });
+    res.status(200).json({
+      success: true,
+      store,
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

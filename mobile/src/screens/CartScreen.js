@@ -10,18 +10,35 @@ import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../utils/currency';
 import api from '../api/axios';
 
+const DEFAULT_METHODS = [
+  { id: 'credit_card', name: 'Credit / Debit Card', icon: '💳', desc: 'Visa, Mastercard & more' },
+  { id: 'cod', name: 'Cash on Delivery', icon: '💵', desc: 'Pay when you receive' },
+];
+
 export default function CartScreen({ navigation }) {
   const { isAuthenticated } = useAuth();
   const { cartItems, loading, fetchCart, updateQuantity, removeItem } = useCart();
   const { store } = useStore();
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('credit_card');
+  const [paymentMethods, setPaymentMethods] = useState(DEFAULT_METHODS);
   const [shippingInfo, setShippingInfo] = useState({
     address: '', city: '', country: '', zipCode: '', mobileNo: '',
   });
 
   useEffect(() => {
     if (isAuthenticated) fetchCart();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api.get('/api/v1/payments/methods').then((res) => {
+      if (res.data.success) {
+        const enabled = res.data.methods.filter((m) => m.enabled);
+        if (enabled.length) setPaymentMethods(enabled);
+      }
+    }).catch(() => {});
   }, [isAuthenticated]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
@@ -36,13 +53,13 @@ export default function CartScreen({ navigation }) {
     }
     setCheckingOut(true);
     try {
-      await api.post('/api/v1/orders/create-order', {
+      const orderPayload = {
         shippingInfo: {
           address: shippingInfo.address,
-          mobileNo: parseInt(shippingInfo.mobileNo),
+          mobileNo: shippingInfo.mobileNo.replace(/[^0-9]/g, ""),
           city: shippingInfo.city,
           country: shippingInfo.country,
-          zipCode: parseInt(shippingInfo.zipCode),
+          zipCode: shippingInfo.zipCode.replace(/[^0-9]/g, ""),
         },
         items: cartItems.map((item) => ({
           productId: item.productId,
@@ -51,16 +68,60 @@ export default function CartScreen({ navigation }) {
           quantity: item.quantity,
           image: item.image || '',
         })),
-        paymentId: 'mobile_order',
-        paymentStatus: 'Pending',
+        paymentMethod,
         taxPrice: tax,
         shippingCost: 0,
         totalPrice: total,
         orderStatus: 'Processing',
-      });
-      Toast.show({ type: 'success', text1: 'Order Placed!', text2: 'Your order has been placed successfully.' });
-      setShowCheckout(false);
-      fetchCart();
+      };
+
+      if (paymentMethod === 'cod') {
+        orderPayload.paymentId = `cod_${Date.now()}`;
+        orderPayload.paymentStatus = 'pending';
+        await api.post('/api/v1/orders/create-order', orderPayload);
+        Toast.show({ type: 'success', text1: 'Order Placed!', text2: 'Pay on delivery.' });
+        setShowCheckout(false);
+        fetchCart();
+        return;
+      }
+
+      orderPayload.paymentId = `pending_${Date.now()}`;
+      orderPayload.paymentStatus = 'pending';
+      const orderRes = await api.post('/api/v1/orders/create-order', orderPayload);
+      const orderId = orderRes.data.order.id;
+
+      if (paymentMethod === 'credit_card') {
+        Toast.show({ type: 'info', text1: 'Card Payment', text2: 'Complete payment to confirm order' });
+        const sessionRes = await api.post('/api/v1/payments/create-session', {
+          paymentMethod: 'credit_card',
+          amount: total,
+          currency: (store.currency || 'USD').toLowerCase(),
+          orderId,
+          items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
+          shippingInfo: shippingInfo,
+        });
+        if (sessionRes.data.success && sessionRes.data.clientSecret) {
+          Toast.show({ type: 'success', text1: 'Redirecting...', text2: 'Complete payment in browser' });
+        }
+        return;
+      }
+
+      if (paymentMethod === 'paypal' || paymentMethod === 'tabby' || paymentMethod === 'tamara') {
+        const sessionRes = await api.post('/api/v1/payments/create-session', {
+          paymentMethod,
+          amount: total,
+          currency: store.currency || 'USD',
+          orderId,
+          items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
+          shippingInfo: shippingInfo,
+        });
+        if (sessionRes.data.success && sessionRes.data.checkoutUrl) {
+          Toast.show({ type: 'info', text1: 'Redirecting...', text2: 'Complete payment in browser' });
+        } else {
+          Toast.show({ type: 'error', text1: 'Error', text2: `${paymentMethod} is not configured` });
+        }
+        return;
+      }
     } catch (e) {
       Toast.show({ type: 'error', text1: 'Error', text2: e.response?.data?.message || 'Failed to place order' });
     } finally {
@@ -184,7 +245,7 @@ export default function CartScreen({ navigation }) {
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
             <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, maxHeight: '80%' }}>
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 20 }}>Shipping Information</Text>
+                <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 20 }}>Checkout</Text>
 
                 {['address', 'city', 'country', 'zipCode', 'mobileNo'].map((field) => (
                   <View key={field}>
@@ -202,6 +263,35 @@ export default function CartScreen({ navigation }) {
                       }}
                     />
                   </View>
+                ))}
+
+                <Text style={{ fontSize: 16, fontWeight: '700', marginTop: 20, marginBottom: 12 }}>Payment Method</Text>
+                {paymentMethods.map((pm) => (
+                  <TouchableOpacity
+                    key={pm.id}
+                    onPress={() => setPaymentMethod(pm.id)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', padding: 12,
+                      borderRadius: 12, borderWidth: 1, marginBottom: 8,
+                      borderColor: paymentMethod === pm.id ? '#059669' : '#e5e7eb',
+                      backgroundColor: paymentMethod === pm.id ? '#f0fdf4' : '#fff',
+                    }}
+                  >
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 10, borderWidth: 2,
+                      borderColor: paymentMethod === pm.id ? '#059669' : '#d1d5db',
+                      justifyContent: 'center', alignItems: 'center', marginRight: 12,
+                    }}>
+                      {paymentMethod === pm.id && (
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#059669' }} />
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 18, marginRight: 8 }}>{pm.icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: '600', fontSize: 14 }}>{pm.name}</Text>
+                      <Text style={{ color: '#6b7280', fontSize: 12 }}>{pm.desc}</Text>
+                    </View>
+                  </TouchableOpacity>
                 ))}
 
                 <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 12, marginTop: 16 }}>

@@ -9,6 +9,9 @@ import cookieParser from "cookie-parser";
 import orderRouter from "./routes/orderRoutes.js";
 import storeRouter from "./routes/storeRoutes.js";
 import cartRouter from "./routes/cartRoutes.js";
+import stripeRouter from "./routes/stripeRoutes.js";
+import paymentRouter from "./routes/paymentRoutes.js";
+import { stripeWebhook } from "./controllers/stripeController.js";
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -29,6 +32,8 @@ app.use(cors({
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+app.post("/api/v1/payments/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -42,6 +47,8 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/store", storeRouter);
 app.use("/api/v1/cart", cartRouter);
+app.use("/api/v1/payments", stripeRouter);
+app.use("/api/v1/payments", paymentRouter);
 
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Server is running", timestamp: new Date().toISOString() });

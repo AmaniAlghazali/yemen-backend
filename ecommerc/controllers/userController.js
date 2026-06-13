@@ -218,7 +218,17 @@ export const updatePasswordController = async (req, res) => {
 
 export const deleteUserProfileController = async (req, res) => {
   try {
-    await prisma.user.delete({ where: { id: req.user.id } });
+    const userId = req.user.id;
+
+    await prisma.cartItem.deleteMany({ where: { cart: { userId } } });
+    await prisma.cart.deleteMany({ where: { userId } });
+    await prisma.orderItem.deleteMany({ where: { order: { userId } } });
+    await prisma.order.deleteMany({ where: { userId } });
+    await prisma.review.deleteMany({ where: { userId } });
+    await prisma.productImage.deleteMany({ where: { product: { userId } } });
+    await prisma.product.deleteMany({ where: { userId } });
+
+    await prisma.user.delete({ where: { id: userId } });
 
     res.cookie("token", null, {
       expires: new Date(Date.now()),
@@ -498,6 +508,14 @@ export const deleteUser = async (req, res) => {
         message: "Security restriction: You cannot delete your own active administrator account.",
       });
     }
+
+    await prisma.cartItem.deleteMany({ where: { cart: { userId } } });
+    await prisma.cart.deleteMany({ where: { userId } });
+    await prisma.orderItem.deleteMany({ where: { order: { userId } } });
+    await prisma.order.deleteMany({ where: { userId } });
+    await prisma.review.deleteMany({ where: { userId } });
+    await prisma.productImage.deleteMany({ where: { product: { userId } } });
+    await prisma.product.deleteMany({ where: { userId } });
 
     await prisma.user.delete({ where: { id: userId } });
 

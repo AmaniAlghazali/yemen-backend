@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ALTER COLUMN "shippingMobileNo" SET DATA TYPE TEXT,
+ALTER COLUMN "shippingZipCode" SET DATA TYPE TEXT;

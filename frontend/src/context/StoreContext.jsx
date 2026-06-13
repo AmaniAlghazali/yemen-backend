@@ -9,6 +9,7 @@ export const StoreProvider = ({ children }) => {
     currency: "SAR",
     taxRate: 15,
     maintenanceMode: false,
+    stripePublishableKey: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -22,6 +23,7 @@ export const StoreProvider = ({ children }) => {
             currency: res.data.store.currency || "SAR",
             taxRate: res.data.store.taxRate ?? 15,
             maintenanceMode: res.data.store.maintenanceMode || false,
+            stripePublishableKey: res.data.stripePublishableKey || null,
           });
         }
       } catch {

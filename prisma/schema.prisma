@@ -71,12 +71,13 @@ model Review {
 model Order {
   id               String   @id @default(cuid())
   shippingAddress  String
-  shippingMobileNo Int
+  shippingMobileNo String
   shippingCity     String
   shippingCountry  String
-  shippingZipCode  Int
+  shippingZipCode  String
   paymentId        String
   paymentStatus    String
+  paymentMethod    String   @default("credit_card")
   taxPrice         Float    @default(0)
   shippingCost     Float    @default(0)
   orderStatus      String   @default("Processing")

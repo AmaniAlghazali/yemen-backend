@@ -1,5 +1,10 @@
+import Stripe from "stripe";
 import { prisma } from "../db/conn.js";
 import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
+
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 export const createOrderController = async (req, res, next) => {
   try {
@@ -8,6 +13,7 @@ export const createOrderController = async (req, res, next) => {
       items,
       paymentId,
       paymentStatus,
+      paymentMethod,
       taxPrice,
       shippingCost,
       totalPrice,
@@ -21,15 +27,44 @@ export const createOrderController = async (req, res, next) => {
       });
     }
 
+    const missingProductId = items.find(
+      (item) => !item.productId && !item.product
+    );
+    if (missingProductId) {
+      return res.status(400).json({
+        success: false,
+        message: `Item "${missingProductId.name || missingProductId.title || "unknown"}" is missing productId`,
+      });
+    }
+
+    let finalPaymentId = paymentId || `pay_mock_${Date.now()}`;
+    let finalPaymentStatus = paymentStatus || "succeeded";
+
+    if (paymentId && paymentId.startsWith("pi_")) {
+      try {
+        const intent = await stripe.paymentIntents.retrieve(paymentId);
+        if (intent.status === "succeeded") {
+          finalPaymentStatus = "succeeded";
+        } else if (intent.status === "processing") {
+          finalPaymentStatus = "processing";
+        } else {
+          finalPaymentStatus = "failed";
+        }
+      } catch {
+        finalPaymentStatus = paymentStatus || "pending";
+      }
+    }
+
     const order = await prisma.order.create({
       data: {
         shippingAddress: shippingInfo.address,
-        shippingMobileNo: Number(shippingInfo.mobileNo),
+        shippingMobileNo: String(shippingInfo.mobileNo || "").replace(/[^0-9]/g, ""),
         shippingCity: shippingInfo.city,
         shippingCountry: shippingInfo.country,
-        shippingZipCode: Number(shippingInfo.zipCode),
-        paymentId: paymentId || `pay_mock_${Date.now()}`,
-        paymentStatus: paymentStatus || "succeeded",
+        shippingZipCode: String(shippingInfo.zipCode || "").replace(/[^0-9]/g, ""),
+        paymentId: finalPaymentId,
+        paymentStatus: finalPaymentStatus,
+        paymentMethod: paymentMethod || "credit_card",
         taxPrice: Number(taxPrice) || 0,
         shippingCost: Number(shippingCost) || 0,
         totalPrice: Number(totalPrice) || 0,
@@ -262,10 +297,10 @@ export const updateOrderelement = async (req, res, next) => {
       where: { id: orderId },
       data: {
         shippingAddress: address,
-        shippingMobileNo: Number(mobileNo),
+        shippingMobileNo: String(mobileNo || "").replace(/[^0-9]/g, ""),
         shippingCity: city,
         shippingCountry: country,
-        shippingZipCode: Number(zipCode),
+        shippingZipCode: String(zipCode || "").replace(/[^0-9]/g, ""),
         taxPrice: Number(taxPrice),
         shippingCost: Number(shippingCost),
         totalPrice: Number(totalPrice),
