@@ -37,6 +37,17 @@ export const createOrderController = async (req, res, next) => {
       });
     }
 
+    const invalidProduct = items.find((item) => {
+      const pid = item.productId || item.product;
+      return !pid || pid === "undefined" || pid === "null";
+    });
+    if (invalidProduct) {
+      return res.status(400).json({
+        success: false,
+        message: `Item "${invalidProduct.name || invalidProduct.title || "unknown"}" has an invalid productId`,
+      });
+    }
+
     let finalPaymentId = paymentId || `pay_mock_${Date.now()}`;
     let finalPaymentStatus = paymentStatus || "succeeded";
 
@@ -72,13 +83,16 @@ export const createOrderController = async (req, res, next) => {
         paidAt: new Date(),
         userId: req.user.id,
         items: {
-          create: items.map((item) => ({
-            name: item.title || item.name,
-            price: Number(item.price),
-            quantity: Number(item.quantity),
-            image: item.image || "https://placehold.co/400",
-            productId: item.productId || item.product,
-          })),
+          create: items.map((item) => {
+            const pid = item.productId || item.product;
+            return {
+              name: item.title || item.name,
+              price: Number(item.price),
+              quantity: Number(item.quantity),
+              image: item.image || "https://placehold.co/400",
+              productId: pid,
+            };
+          }),
         },
       },
       include: { items: true },
