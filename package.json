@@ -3,8 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "prisma migrate deploy && cd frontend && npm install && npm run build",
-    "start": "node ecommerc/index.js",
+    "build": "prisma generate && cd frontend && npm install && npm run build",
+    "vercel-build": "prisma generate && cd frontend && npm install && npm run build",
+    "migrate": "prisma migrate deploy",
+    "prestart": "prisma migrate deploy || true",
+    "start": "prisma migrate deploy && node ecommerc/index.js",
     "dev": "node --watch ecommerc/index.js",
     "postinstall": "prisma generate"
   },
