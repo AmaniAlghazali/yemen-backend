@@ -57,6 +57,15 @@ export const isAdmin = (...roles) => {
 export const resgisterUserController = async (req, res) => {
   try {
     const { name, email, password, avatar } = req.body;
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered.",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePublicId = avatar ? "local" : "id";
     const profileUrl = avatar || "url";
