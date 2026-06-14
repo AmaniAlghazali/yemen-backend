@@ -13,6 +13,7 @@ const CARD_OPTIONS = {
     },
     invalid: { color: "#ef4444" },
   },
+  hidePostalCode: true,
 };
 
 const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) => {
