@@ -7,6 +7,7 @@ import { useStore } from "../context/StoreContext";
 import { formatPrice } from "../utils/currency";
 import { toast } from "react-toastify";
 import StripeCardForm from "../components/StripeCardForm";
+import PayPalForm from "../components/PayPalForm";
 
 const DEFAULT_METHODS = [
   { id: "credit_card", name: "Credit / Debit Card", icon: "💳", description: "Pay with Visa, Mastercard, or other cards" },
@@ -195,24 +196,8 @@ const Cart = () => {
       }
 
       if (paymentMethod === "paypal") {
-        const sessionRes = await axios.post(
-          "/api/v1/payments/create-session",
-          {
-            paymentMethod: "paypal",
-            amount: total,
-            currency: store.currency || "USD",
-            orderId,
-            items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
-            shippingInfo,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        if (sessionRes.data.success && sessionRes.data.checkoutUrl) {
-          window.location.href = sessionRes.data.checkoutUrl;
-        } else {
-          toast.error("PayPal is not configured");
-        }
+        setCurrentOrderId(orderId);
+        setCardStep("paypal_form");
         return;
       }
 
@@ -240,6 +225,34 @@ const Cart = () => {
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to place order");
     } finally {
+      setCheckingOut(false);
+    }
+  };
+
+  const handlePayPalSubmit = async (billingInfo) => {
+    if (!currentOrderId) return;
+    setCheckingOut(true);
+    try {
+      const sessionRes = await axios.post(
+        "/api/v1/payments/create-session",
+        {
+          paymentMethod: "paypal",
+          amount: total,
+          currency: store.currency || "USD",
+          orderId: currentOrderId,
+          items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
+          shippingInfo: { ...shippingInfo, ...billingInfo },
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (sessionRes.data.success && sessionRes.data.checkoutUrl) {
+        window.location.href = sessionRes.data.checkoutUrl;
+      } else {
+        toast.error("PayPal is not configured");
+        setCheckingOut(false);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to initialize PayPal");
       setCheckingOut(false);
     }
   };
@@ -366,7 +379,7 @@ const Cart = () => {
           <div className="bg-base-100 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-auto">
             <div className="sticky top-0 bg-base-100 p-4 border-b border-base-300 flex justify-between items-center">
               <h3 className="text-lg md:text-xl font-bold">
-                {cardStep === "form" ? "Card Payment" : "Checkout"}
+                {cardStep === "form" ? "Card Payment" : cardStep === "paypal_form" ? "PayPal" : "Checkout"}
               </h3>
               <button
                 onClick={() => {
@@ -390,6 +403,14 @@ const Cart = () => {
                     onSuccess={handleCardSuccess}
                   />
                 </Elements>
+              </div>
+            ) : cardStep === "paypal_form" ? (
+              <div className="p-4">
+                <PayPalForm
+                  total={total}
+                  currency={store.currency || "USD"}
+                  onSubmit={handlePayPalSubmit}
+                />
               </div>
             ) : cardStep === "creating" ? (
               <div className="p-10 flex flex-col items-center justify-center space-y-4">

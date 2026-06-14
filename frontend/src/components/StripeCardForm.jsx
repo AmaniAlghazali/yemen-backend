@@ -37,6 +37,8 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
   const [processing, setProcessing] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [cardBrand, setCardBrand] = useState("unknown");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   const handleBrandChange = (event) => {
     setCardBrand(event.brand || "unknown");
@@ -51,7 +53,9 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
     const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
         card: elements.getElement(CardNumberElement),
-        billing_details: {},
+        billing_details: {
+          name: `${firstName} ${lastName}`.trim() || undefined,
+        },
       },
       setup_future_usage: saveCard ? "off_session" : undefined,
     });
@@ -73,6 +77,31 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="bg-base-200 rounded-xl p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label-text font-bold mb-1 block">First Name</label>
+            <input
+              type="text"
+              required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="input input-bordered w-full rounded-lg bg-white"
+              placeholder="John"
+            />
+          </div>
+          <div>
+            <label className="label-text font-bold mb-1 block">Last Name</label>
+            <input
+              type="text"
+              required
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="input input-bordered w-full rounded-lg bg-white"
+              placeholder="Doe"
+            />
+          </div>
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="label-text font-bold">Card Number</label>
@@ -93,7 +122,7 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
             </div>
           </div>
           <div>
-            <label className="label-text font-bold mb-1 block">CVV</label>
+            <label className="label-text font-bold mb-1 block">CSC</label>
             <div className="bg-white rounded-lg p-3 border border-base-300">
               <CardCvcElement options={{ style: INPUT_STYLE }} />
             </div>
