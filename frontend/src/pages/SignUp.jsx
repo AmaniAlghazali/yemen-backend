@@ -39,8 +39,15 @@ const SignUp = () => {
             
             toast.success("Registration Successful!");
             const token = response.data.token;
+            const user = response.data.user;
             
             Cookies.set("token", token, { expires: 7, secure: false });
+            localStorage.setItem("token", token);
+            if (user.role) localStorage.setItem("userRole", user.role);
+            if (user.id) localStorage.setItem("userId", user.id);
+            if (user.profile?.url && user.profile.url !== "url") {
+              localStorage.setItem("userAvatar", user.profile.url);
+            }
             navigate("/");
         } catch (error) {
             const backendMessage = error.response?.data?.message || "Registration Failed";
