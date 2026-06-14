@@ -3,6 +3,18 @@ import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { formatPrice } from "../utils/currency";
 import { toast } from "react-toastify";
 
+const BRANDS = {
+  mada: { label: "MADA", color: "bg-emerald-600 text-white" },
+  visa: { label: "VISA", color: "bg-blue-700 text-white" },
+  mastercard: { label: "Mastercard", color: "bg-orange-500 text-white" },
+  jcb: { label: "JCB", color: "bg-green-600 text-white" },
+  amex: { label: "Amex", color: "bg-blue-500 text-white" },
+  discover: { label: "Discover", color: "bg-orange-600 text-white" },
+  diners: { label: "Diners", color: "bg-indigo-600 text-white" },
+  unionpay: { label: "UnionPay", color: "bg-green-700 text-white" },
+  unknown: { label: "Card", color: "bg-gray-500 text-white" },
+};
+
 const CARD_OPTIONS = {
   style: {
     base: {
@@ -21,6 +33,11 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
+  const [cardBrand, setCardBrand] = useState("unknown");
+
+  const handleChange = (event) => {
+    setCardBrand(event.brand || "unknown");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,14 +64,19 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
     }
   };
 
+  const brand = BRANDS[cardBrand] || BRANDS.unknown;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="bg-base-200 rounded-xl p-4">
-        <label className="label">
-          <span className="label-text font-bold">Card Details</span>
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="label-text font-bold">Card Details</label>
+          <span className={`text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md ${brand.color}`}>
+            {brand.label}
+          </span>
+        </div>
         <div className="bg-white rounded-lg p-3 border border-base-300">
-          <CardElement options={CARD_OPTIONS} />
+          <CardElement options={CARD_OPTIONS} onChange={handleChange} />
         </div>
       </div>
 
