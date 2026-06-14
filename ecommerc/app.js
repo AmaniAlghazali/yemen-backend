@@ -51,7 +51,13 @@ app.use("/api/v1/payments", stripeRouter);
 app.use("/api/v1/payments", paymentRouter);
 
 app.get("/api/health", (req, res) => {
-  res.json({ success: true, message: "Server is running", timestamp: new Date().toISOString() });
+  res.json({
+    success: true,
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+    stripeConfigured: !!process.env.STRIPE_SECRET_KEY,
+    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 12) + "..." : null,
+  });
 });
 
 app.use((req, res) => {
