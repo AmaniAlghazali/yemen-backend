@@ -35,7 +35,7 @@ const availableMethods = [
   { id: "credit_card", name: "Credit / Debit Card", icon: "💳", enabled: !!stripe },
   { id: "tabby", name: "Tabby", icon: "🐱", enabled: !!TABBY_API_KEY },
   { id: "tamara", name: "Tamara", icon: "🌸", enabled: !!TAMARA_API_KEY },
-  { id: "paypal", name: "PayPal", icon: "🅿️", enabled: !!(PAYPAL_CLIENT_ID && PAYPAL_CLIENT_SECRET) },
+  { id: "paypal", name: "PayPal", icon: "🅿️", enabled: true },
   { id: "cod", name: "Cash on Delivery", icon: "💵", enabled: true },
 ];
 

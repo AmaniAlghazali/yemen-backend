@@ -11,6 +11,7 @@ import PayPalForm from "../components/PayPalForm";
 
 const DEFAULT_METHODS = [
   { id: "credit_card", name: "Credit / Debit Card", icon: "💳", description: "Pay with Visa, Mastercard, or other cards" },
+  { id: "paypal", name: "PayPal", icon: "🅿️", description: "Pay with your PayPal account or card" },
   { id: "cod", name: "Cash on Delivery", icon: "💵", description: "Pay when you receive your order" },
 ];
 
@@ -486,7 +487,7 @@ const Cart = () => {
                     <span>Total</span>
                     <span className="text-primary">{formatPrice(total, store.currency)}</span>
                   </div>
-                  {paymentMethod !== "cod" && (
+                  {(paymentMethod === "tabby" || paymentMethod === "tamara") && (
                     <p className="text-xs text-center mt-2 opacity-60">
                       You will be redirected to complete payment
                     </p>
