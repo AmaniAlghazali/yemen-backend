@@ -2,15 +2,9 @@ import { prisma } from "../db/conn.js";
 import ApiFeatures from "../util/ApiFeatures.js";
 import { uploadToCloudinaryFromBuffer } from "../util/cloudinary.js";
 
-const base64ToBuffer = (dataUrl) => {
-  const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-  if (!matches) return null;
-  return Buffer.from(matches[2], "base64");
-};
-
 export const createProducts = async (req, res) => {
   try {
-    const { title, description, price, stock, category, image } = req.body;
+    const { title, description, price, stock, category, existingImageUrl } = req.body;
 
     const data = {
       title,
@@ -20,14 +14,11 @@ export const createProducts = async (req, res) => {
       category,
     };
 
-    if (image) {
-      const buffer = base64ToBuffer(image);
-      if (buffer) {
-        const result = await uploadToCloudinaryFromBuffer(buffer, "products");
-        data.images = { create: [{ publicId: result.public_id, url: result.secure_url }] };
-      } else if (image.startsWith("http://") || image.startsWith("https://")) {
-        data.images = { create: [{ publicId: "url-direct", url: image }] };
-      }
+    if (req.file) {
+      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
+      data.images = { create: [{ publicId: result.public_id, url: result.secure_url }] };
+    } else if (existingImageUrl) {
+      data.images = { create: [{ publicId: "url-direct", url: existingImageUrl }] };
     }
 
     const product = await prisma.product.create({
@@ -97,7 +88,7 @@ export const getProductDetail = async (req, res) => {
 
 export const updateProductController = async (req, res) => {
   try {
-    const { title, description, price, stock, category, image } = req.body;
+    const { title, description, price, stock, category, existingImageUrl } = req.body;
     const existing = await prisma.product.findUnique({
       where: { id: req.params.id },
     });
@@ -114,20 +105,17 @@ export const updateProductController = async (req, res) => {
       category,
     };
 
-    if (image) {
-      const buffer = base64ToBuffer(image);
-      if (buffer) {
-        const result = await uploadToCloudinaryFromBuffer(buffer, "products");
-        await prisma.productImage.deleteMany({ where: { productId: existing.id } });
-        await prisma.productImage.create({
-          data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
-        });
-      } else if (image.startsWith("http://") || image.startsWith("https://")) {
-        await prisma.productImage.deleteMany({ where: { productId: existing.id } });
-        await prisma.productImage.create({
-          data: { publicId: "url-direct", url: image, productId: existing.id },
-        });
-      }
+    if (req.file) {
+      const result = await uploadToCloudinaryFromBuffer(req.file.buffer, "products");
+      await prisma.productImage.deleteMany({ where: { productId: existing.id } });
+      await prisma.productImage.create({
+        data: { publicId: result.public_id, url: result.secure_url, productId: existing.id },
+      });
+    } else if (existingImageUrl) {
+      await prisma.productImage.deleteMany({ where: { productId: existing.id } });
+      await prisma.productImage.create({
+        data: { publicId: "url-direct", url: existingImageUrl, productId: existing.id },
+      });
     }
 
     const product = await prisma.product.update({

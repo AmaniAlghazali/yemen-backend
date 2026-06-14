@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "prisma generate && cd frontend && npm install && npm run build",
-    "vercel-build": "prisma generate && cd frontend && npm install && npm run build",
+    "vercel-build": "DATABASE_URL=$POSTGRES_URL_NON_POOLING prisma migrate deploy && prisma generate && cd frontend && npm install && npm run build",
     "migrate": "prisma migrate deploy",
     "prestart": "prisma migrate deploy || true",
     "start": "prisma migrate deploy && node ecommerc/index.js",

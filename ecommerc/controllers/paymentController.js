@@ -19,6 +19,18 @@ const PAYPAL_API_URL =
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || "";
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || "";
 
+const EXCHANGE_RATES = {
+  YER: 1600, // 1 USD = 1600 YER
+};
+
+function toStripeAmount(price, currency) {
+  const rate = EXCHANGE_RATES[currency];
+  if (rate) {
+    return Math.max(Math.round((price / rate) * 100), 50);
+  }
+  return Math.max(Math.round(price * 100), 50);
+}
+
 const availableMethods = [
   { id: "credit_card", name: "Credit / Debit Card", icon: "💳", enabled: !!stripe },
   { id: "tabby", name: "Tabby", icon: "🐱", enabled: !!TABBY_API_KEY },
@@ -88,11 +100,11 @@ export const createPaymentSession = async (req, res) => {
           payment_method_types: ["card"],
           line_items: (items || []).map((item) => ({
             price_data: {
-              currency: currency || "usd",
+              currency: "usd",
               product_data: {
                 name: item.title || "Order item",
               },
-              unit_amount: Math.round(item.price * 100),
+              unit_amount: toStripeAmount(item.price, currency),
             },
             quantity: item.quantity || 1,
           })),

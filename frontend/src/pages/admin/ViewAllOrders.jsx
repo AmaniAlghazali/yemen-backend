@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../../context/StoreContext";
 import { formatPrice } from "../../utils/currency";
 import AdminLayout from "../../components/AdminLayout";
@@ -13,25 +13,8 @@ const ViewAllOrders = () => {
 
   const token = localStorage.getItem("token");
 
-  // ================= EDIT STATES =================
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingOrderId, setEditingOrderId] = useState(null);
-  const [editImageFile, setEditImageFile] = useState(null);
-
-  const [editOrderFormData, setEditOrderFormData] = useState({
-    address: "",
-    mobileNo: "",
-    city: "",
-    country: "",
-    zipCode: "",
-    taxPrice: "",
-    shippingCost: "",
-    totalPrice: "",
-    image: "",
-  });
-
   // ================= CREATE ORDER STATES =================
-  const [newOrderImageFile, setNewOrderImageFile] = useState(null);
+  const [, setNewOrderImageFile] = useState(null);
 
   const [newOrder, setNewOrder] = useState({
     address: "",
@@ -51,134 +34,29 @@ const ViewAllOrders = () => {
     orderStatus: "Processing",
   });
 
-  // ================= FETCH ORDERS =================
-  const getAllOrders = useCallback(async () => {
-    try {
-      const response = await axios.get(
-        "/api/v1/orders/all-orders",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        },
-      );
-
-      setOrders(response.data.orders || []);
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-    }
-  }, [token]);
-
-  // ================= FETCH PRODUCTS =================
-  const getProducts = useCallback(async () => {
-    try {
-      const res = await axios.get(
-        "/api/v1/products/get-all-products",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setProducts(res.data.products || []);
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-    }
-  }, [token]);
-
+  // ================= FETCH ORDERS & PRODUCTS =================
   useEffect(() => {
-    getAllOrders();
-    getProducts();
-  }, [getAllOrders, getProducts]);
+    const fetchData = async () => {
+      try {
+        const [ordersRes, productsRes] = await Promise.all([
+          axios.get("/api/v1/orders/all-orders", {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }),
+          axios.get("/api/v1/products/get-all-products", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-  // ================= OPEN EDIT MODAL =================
-  const openEditModal = (order) => {
-    let currentImage = "https://placehold.co/400";
-
-    const firstItem = order.items?.[0];
-
-    if (
-      firstItem?.image &&
-      typeof firstItem.image === "string" &&
-      !firstItem.image.includes("[object Object]")
-    ) {
-      currentImage = firstItem.image;
-    }
-
-    setEditingOrderId(order.id);
-
-    setEditOrderFormData({
-      address: order.shippingAddress || "",
-      mobileNo: order.shippingMobileNo || "",
-      city: order.shippingCity || "",
-      country: order.shippingCountry || "",
-      zipCode: order.shippingZipCode || "",
-      taxPrice: order.taxPrice || "",
-      shippingCost: order.shippingCost || "",
-      totalPrice: order.totalPrice || "",
-      image: currentImage,
-    });
-
-    setEditImageFile(null);
-    setIsEditModalOpen(true);
-  };
-
-  // ================= UPDATE ORDER =================
-  const updateOrderDetails = async () => {
-    try {
-      setLoading(true);
-
-      const formData = new FormData();
-
-      formData.append("address", editOrderFormData.address);
-      formData.append("mobileNo", editOrderFormData.mobileNo);
-      formData.append("city", editOrderFormData.city);
-      formData.append("country", editOrderFormData.country);
-      formData.append("zipCode", editOrderFormData.zipCode);
-      formData.append("taxPrice", editOrderFormData.taxPrice);
-      formData.append("shippingCost", editOrderFormData.shippingCost);
-      formData.append("totalPrice", editOrderFormData.totalPrice);
-
-      if (editImageFile) {
-        formData.append("image", editImageFile);
-      } else {
-        formData.append("existingImageUrl", editOrderFormData.image);
+        setOrders(ordersRes.data.orders || []);
+        setProducts(productsRes.data.products || []);
+      } catch (error) {
+        console.log(error.response?.data || error.message);
       }
+    };
 
-      const response = await axios.put(
-        `/api/v1/orders/update-order-element/${editingOrderId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-          withCredentials: true,
-        },
-      );
-
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === editingOrderId
-            ? { ...order, ...response.data.order }
-            : order,
-        ),
-      );
-
-      alert("Order Updated Successfully!");
-
-      setIsEditModalOpen(false);
-      setEditingOrderId(null);
-      setEditImageFile(null);
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-      alert("Failed to update order details.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchData();
+  }, [token]);
 
   // ================= CREATE ORDER =================
   const createOrder = async () => {
@@ -633,13 +511,6 @@ const ViewAllOrders = () => {
                           <option value="Delivered">Delivered</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
-
-                        <button
-                          onClick={() => openEditModal(order)}
-                          className="btn btn-warning"
-                        >
-                          Edit
-                        </button>
 
                         <button
                           onClick={() => deleteOrder(order.id)}

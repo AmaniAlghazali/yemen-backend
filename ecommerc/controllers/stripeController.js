@@ -5,6 +5,18 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
+const EXCHANGE_RATES = {
+  YER: 1600, // 1 USD = 1600 YER
+};
+
+function toStripeAmount(amount, currency) {
+  const rate = EXCHANGE_RATES[currency];
+  if (rate) {
+    return Math.max(Math.round((amount / rate) * 100), 50);
+  }
+  return Math.max(Math.round(amount * 100), 50);
+}
+
 export const createPaymentIntent = async (req, res) => {
   try {
     const { amount, currency } = req.body;
@@ -17,8 +29,8 @@ export const createPaymentIntent = async (req, res) => {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
-      currency: currency || "usd",
+      amount: toStripeAmount(amount, currency),
+      currency: "usd",
       metadata: { userId: req.user.id },
     });
 

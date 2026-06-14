@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import { useStore } from "../../context/StoreContext";
 import { formatPrice } from "../../utils/currency";
 import AdminLayout from "../../components/AdminLayout";
@@ -14,10 +13,8 @@ const toast = {
 const ViewAllProduct = () => {
   const { store } = useStore();
   const token = localStorage.getItem("token");
-  const navigate = useNavigate();
-
   // Loading and Stats States
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [productStats, setProductStats] = useState({ total: 0, lowStock: 0 });
 
   // Product States
@@ -108,36 +105,25 @@ const ViewAllProduct = () => {
     }
   };
 
-  const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
-        title: productFormData.title,
-        description: productFormData.description,
-        price: productFormData.price,
-        stock: productFormData.stock,
-        category: productFormData.category,
-      };
+      const payload = new FormData();
+      payload.append("title", productFormData.title);
+      payload.append("description", productFormData.description);
+      payload.append("price", productFormData.price);
+      payload.append("stock", productFormData.stock);
+      payload.append("category", productFormData.category);
 
       if (imageUrl) {
-        payload.image = imageUrl;
+        payload.append("existingImageUrl", imageUrl);
       } else if (images && !Array.isArray(images)) {
-        payload.image = await fileToBase64(images);
+        payload.append("image", images);
       }
 
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
         withCredentials: true,
       };
@@ -216,7 +202,7 @@ const ViewAllProduct = () => {
           toast.success("Product deleted!");
           await fetchProducts();
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to delete product");
       }
     }

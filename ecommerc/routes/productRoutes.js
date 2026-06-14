@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../util/multer.js";
 import {
   createProducts,
   deleteProductController,
@@ -14,6 +15,7 @@ productsRouter.post(
   "/create-product",
   isAuthenticatedUser,
   isAdmin("admin"),
+  upload.single("image"),
   createProducts
 );
 
@@ -24,6 +26,7 @@ productsRouter.put(
   "/update-product/:id", 
   isAuthenticatedUser,
   isAdmin("admin"),
+  upload.single("image"),
   updateProductController
 );
 
