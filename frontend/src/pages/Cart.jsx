@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
 import axios from "axios";
 import { useStore } from "../context/StoreContext";
 import { formatPrice } from "../utils/currency";
 import { toast } from "react-toastify";
+import StripeCardForm from "../components/StripeCardForm";
 
 const DEFAULT_METHODS = [
   { id: "credit_card", name: "Credit / Debit Card", icon: "💳", description: "Pay with Visa, Mastercard, or other cards" },
@@ -26,6 +29,15 @@ const Cart = () => {
     zipCode: "",
     mobileNo: "",
   });
+
+  const [cardStep, setCardStep] = useState(null);
+  const [clientSecret, setClientSecret] = useState(null);
+  const [currentOrderId, setCurrentOrderId] = useState(null);
+
+  const stripePromise = useMemo(
+    () => (store.stripePublishableKey ? loadStripe(store.stripePublishableKey) : null),
+    [store.stripePublishableKey]
+  );
 
   const token = localStorage.getItem("token");
 
@@ -165,24 +177,20 @@ const Cart = () => {
       const orderId = orderRes.data.order.id;
 
       if (paymentMethod === "credit_card") {
-        const sessionRes = await axios.post(
-          "/api/v1/payments/create-session",
-          {
-            paymentMethod: "credit_card",
-            amount: total,
-            currency: store.currency || "USD",
-            orderId,
-            items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
-            shippingInfo,
-          },
+        setCardStep("creating");
+        const piRes = await axios.post(
+          "/api/v1/payments/create-payment-intent",
+          { amount: total, currency: store.currency || "USD", orderId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        if (sessionRes.data.success && sessionRes.data.checkoutUrl) {
-          window.location.href = sessionRes.data.checkoutUrl;
-        } else {
-          toast.error("Card payment is not available");
+        if (!piRes.data.success) {
+          toast.error("Failed to initialize card payment");
+          setCardStep(null);
+          return;
         }
+        setClientSecret(piRes.data.clientSecret);
+        setCurrentOrderId(orderId);
+        setCardStep("form");
         return;
       }
 
@@ -233,6 +241,25 @@ const Cart = () => {
       toast.error(error.response?.data?.message || "Failed to place order");
     } finally {
       setCheckingOut(false);
+    }
+  };
+
+  const handleCardSuccess = async (paymentIntentId) => {
+    try {
+      await axios.post(
+        "/api/v1/payments/confirm",
+        { paymentMethod: "credit_card", orderId: currentOrderId, paymentId: paymentIntentId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setCartItems([]);
+      window.dispatchEvent(new Event("cartUpdated"));
+      setShowCheckout(false);
+      setCardStep(null);
+      setClientSecret(null);
+      setCurrentOrderId(null);
+      navigate("/");
+    } catch {
+      toast.error("Failed to update order status");
     }
   };
 
@@ -338,111 +365,138 @@ const Cart = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-base-100 rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-auto">
             <div className="sticky top-0 bg-base-100 p-4 border-b border-base-300 flex justify-between items-center">
-              <h3 className="text-lg md:text-xl font-bold">Checkout</h3>
+              <h3 className="text-lg md:text-xl font-bold">
+                {cardStep === "form" ? "Card Payment" : "Checkout"}
+              </h3>
               <button
-                onClick={() => setShowCheckout(false)}
+                onClick={() => {
+                  setShowCheckout(false);
+                  setCardStep(null);
+                  setClientSecret(null);
+                  setCurrentOrderId(null);
+                }}
                 className="btn btn-ghost btn-sm btn-circle"
               >✕</button>
             </div>
-            <form onSubmit={handlePlaceOrder} className="p-4 space-y-4">
-              <div className="form-control">
-                <label className="label"><span className="label-text font-bold">Address</span></label>
-                <input type="text" required value={shippingInfo.address}
-                  onChange={e => setShippingInfo({ ...shippingInfo, address: e.target.value })}
-                  className="input input-bordered rounded-xl" placeholder="Street, building..." />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-bold">City</span></label>
-                  <input type="text" required value={shippingInfo.city}
-                    onChange={e => setShippingInfo({ ...shippingInfo, city: e.target.value })}
-                    className="input input-bordered rounded-xl" placeholder="Riyadh" />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-bold">Country</span></label>
-                  <input type="text" required value={shippingInfo.country}
-                    onChange={e => setShippingInfo({ ...shippingInfo, country: e.target.value })}
-                    className="input input-bordered rounded-xl" placeholder="Saudi Arabia" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-bold">ZIP Code</span></label>
-                  <input type="text" required value={shippingInfo.zipCode}
-                    onChange={e => setShippingInfo({ ...shippingInfo, zipCode: e.target.value })}
-                    className="input input-bordered rounded-xl" />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-bold">Mobile No.</span></label>
-                  <input type="tel" required value={shippingInfo.mobileNo}
-                    onChange={e => setShippingInfo({ ...shippingInfo, mobileNo: e.target.value })}
-                    className="input input-bordered rounded-xl" placeholder="+966" />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="label"><span className="label-text font-bold">Payment Method</span></label>
-                {paymentMethods.map((pm) => (
-                  <label
-                    key={pm.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      paymentMethod === pm.id
-                        ? "border-primary bg-primary/5"
-                        : "border-base-300 hover:border-base-400"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value={pm.id}
-                      checked={paymentMethod === pm.id}
-                      onChange={() => setPaymentMethod(pm.id)}
-                      className="radio radio-primary radio-sm"
-                    />
-                    <span className="text-xl">{pm.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm">{pm.name}</p>
-                      <p className="text-xs opacity-60">{pm.description}</p>
-                    </div>
-                    {paymentMethod === pm.id && (
-                      <span className="badge badge-primary badge-sm">Selected</span>
-                    )}
-                  </label>
-                ))}
+            {cardStep === "form" && clientSecret && stripePromise ? (
+              <div className="p-4">
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <StripeCardForm
+                    total={total}
+                    currency={store.currency || "USD"}
+                    clientSecret={clientSecret}
+                    orderId={currentOrderId}
+                    onSuccess={handleCardSuccess}
+                  />
+                </Elements>
               </div>
-
-              <div className="bg-base-200 rounded-xl p-4">
-                <h4 className="font-bold mb-2">Order Summary</h4>
-                {cartItems.map((item, idx) => (
-                  <div key={item.productId || item.id || idx} className="flex justify-between text-sm py-1">
-                    <span>{item.title} x{item.quantity}</span>
-                    <span className="font-bold">{formatPrice(item.price * item.quantity, store.currency)}</span>
+            ) : cardStep === "creating" ? (
+              <div className="p-10 flex flex-col items-center justify-center space-y-4">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+                <p className="font-bold opacity-60">Preparing card payment...</p>
+              </div>
+            ) : (
+              <form onSubmit={handlePlaceOrder} className="p-4 space-y-4">
+                <div className="form-control">
+                  <label className="label"><span className="label-text font-bold">Address</span></label>
+                  <input type="text" required value={shippingInfo.address}
+                    onChange={e => setShippingInfo({ ...shippingInfo, address: e.target.value })}
+                    className="input input-bordered rounded-xl" placeholder="Street, building..." />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-bold">City</span></label>
+                    <input type="text" required value={shippingInfo.city}
+                      onChange={e => setShippingInfo({ ...shippingInfo, city: e.target.value })}
+                      className="input input-bordered rounded-xl" placeholder="Riyadh" />
                   </div>
-                ))}
-                <div className="divider my-2"></div>
-                <div className="flex justify-between font-black text-lg">
-                  <span>Total</span>
-                  <span className="text-primary">{formatPrice(total, store.currency)}</span>
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-bold">Country</span></label>
+                    <input type="text" required value={shippingInfo.country}
+                      onChange={e => setShippingInfo({ ...shippingInfo, country: e.target.value })}
+                      className="input input-bordered rounded-xl" placeholder="Saudi Arabia" />
+                  </div>
                 </div>
-                {paymentMethod !== "cod" && (
-                  <p className="text-xs text-center mt-2 opacity-60">
-                    You will be redirected to complete payment
-                  </p>
-                )}
-              </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-bold">ZIP Code</span></label>
+                    <input type="text" required value={shippingInfo.zipCode}
+                      onChange={e => setShippingInfo({ ...shippingInfo, zipCode: e.target.value })}
+                      className="input input-bordered rounded-xl" />
+                  </div>
+                  <div className="form-control">
+                    <label className="label"><span className="label-text font-bold">Mobile No.</span></label>
+                    <input type="tel" required value={shippingInfo.mobileNo}
+                      onChange={e => setShippingInfo({ ...shippingInfo, mobileNo: e.target.value })}
+                      className="input input-bordered rounded-xl" placeholder="+966" />
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={checkingOut}
-                className="btn btn-primary btn-block btn-lg rounded-2xl font-black text-lg shadow-lg"
-              >
-                {checkingOut ? (
-                  <><span className="loading loading-spinner loading-sm mr-2"></span>Processing...</>
-                ) : (
-                  `Pay with ${paymentMethods.find((p) => p.id === paymentMethod)?.name || "Credit Card"} — ${formatPrice(total, store.currency)}`
-                )}
-              </button>
-            </form>
+                <div className="space-y-2">
+                  <label className="label"><span className="label-text font-bold">Payment Method</span></label>
+                  {paymentMethods.map((pm) => (
+                    <label
+                      key={pm.id}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        paymentMethod === pm.id
+                          ? "border-primary bg-primary/5"
+                          : "border-base-300 hover:border-base-400"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value={pm.id}
+                        checked={paymentMethod === pm.id}
+                        onChange={() => setPaymentMethod(pm.id)}
+                        className="radio radio-primary radio-sm"
+                      />
+                      <span className="text-xl">{pm.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm">{pm.name}</p>
+                        <p className="text-xs opacity-60">{pm.description}</p>
+                      </div>
+                      {paymentMethod === pm.id && (
+                        <span className="badge badge-primary badge-sm">Selected</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                <div className="bg-base-200 rounded-xl p-4">
+                  <h4 className="font-bold mb-2">Order Summary</h4>
+                  {cartItems.map((item, idx) => (
+                    <div key={item.productId || item.id || idx} className="flex justify-between text-sm py-1">
+                      <span>{item.title} x{item.quantity}</span>
+                      <span className="font-bold">{formatPrice(item.price * item.quantity, store.currency)}</span>
+                    </div>
+                  ))}
+                  <div className="divider my-2"></div>
+                  <div className="flex justify-between font-black text-lg">
+                    <span>Total</span>
+                    <span className="text-primary">{formatPrice(total, store.currency)}</span>
+                  </div>
+                  {paymentMethod !== "cod" && (
+                    <p className="text-xs text-center mt-2 opacity-60">
+                      You will be redirected to complete payment
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={checkingOut}
+                  className="btn btn-primary btn-block btn-lg rounded-2xl font-black text-lg shadow-lg"
+                >
+                  {checkingOut ? (
+                    <><span className="loading loading-spinner loading-sm mr-2"></span>Processing...</>
+                  ) : (
+                    `Pay with ${paymentMethods.find((p) => p.id === paymentMethod)?.name || "Credit Card"} — ${formatPrice(total, store.currency)}`
+                  )}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -19,7 +19,7 @@ function toStripeAmount(amount, currency) {
 
 export const createPaymentIntent = async (req, res) => {
   try {
-    const { amount, currency } = req.body;
+    const { amount, currency, orderId } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -31,7 +31,7 @@ export const createPaymentIntent = async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: toStripeAmount(amount, currency),
       currency: "usd",
-      metadata: { userId: req.user.id },
+      metadata: { userId: req.user.id, orderId: orderId || "" },
     });
 
     res.status(200).json({
