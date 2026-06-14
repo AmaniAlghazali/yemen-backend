@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {
+  CardNumberElement,
+  CardExpiryElement,
+  CardCvcElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import { formatPrice } from "../utils/currency";
 import { toast } from "react-toastify";
 
@@ -15,17 +21,14 @@ const BRANDS = {
   unknown: { label: "Card", color: "bg-gray-500 text-white" },
 };
 
-const CARD_OPTIONS = {
-  style: {
-    base: {
-      fontSize: "16px",
-      color: "#0f172a",
-      "::placeholder": { color: "#94a3b8" },
-      padding: "12px",
-    },
-    invalid: { color: "#ef4444" },
+const INPUT_STYLE = {
+  base: {
+    fontSize: "16px",
+    color: "#0f172a",
+    "::placeholder": { color: "#94a3b8" },
+    fontFamily: "inherit",
   },
-  hidePostalCode: true,
+  invalid: { color: "#ef4444" },
 };
 
 const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) => {
@@ -35,7 +38,7 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
   const [saveCard, setSaveCard] = useState(false);
   const [cardBrand, setCardBrand] = useState("unknown");
 
-  const handleChange = (event) => {
+  const handleBrandChange = (event) => {
     setCardBrand(event.brand || "unknown");
   };
 
@@ -47,7 +50,8 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
 
     const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
-        card: elements.getElement(CardElement),
+        card: elements.getElement(CardNumberElement),
+        billing_details: {},
       },
       setup_future_usage: saveCard ? "off_session" : undefined,
     });
@@ -68,15 +72,32 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="bg-base-200 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <label className="label-text font-bold">Card Details</label>
-          <span className={`text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md ${brand.color}`}>
-            {brand.label}
-          </span>
+      <div className="bg-base-200 rounded-xl p-4 space-y-4">
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label-text font-bold">Card Number</label>
+            <span className={`text-[10px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md ${brand.color}`}>
+              {brand.label}
+            </span>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-base-300">
+            <CardNumberElement options={{ style: INPUT_STYLE }} onChange={handleBrandChange} />
+          </div>
         </div>
-        <div className="bg-white rounded-lg p-3 border border-base-300">
-          <CardElement options={CARD_OPTIONS} onChange={handleChange} />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label-text font-bold mb-1 block">Expiry Date</label>
+            <div className="bg-white rounded-lg p-3 border border-base-300">
+              <CardExpiryElement options={{ style: INPUT_STYLE }} />
+            </div>
+          </div>
+          <div>
+            <label className="label-text font-bold mb-1 block">CVV</label>
+            <div className="bg-white rounded-lg p-3 border border-base-300">
+              <CardCvcElement options={{ style: INPUT_STYLE }} />
+            </div>
+          </div>
         </div>
       </div>
 
