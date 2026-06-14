@@ -196,6 +196,18 @@ const Cart = () => {
       }
 
       if (paymentMethod === "paypal") {
+        setCardStep("creating");
+        const piRes = await axios.post(
+          "/api/v1/payments/create-payment-intent",
+          { amount: total, currency: store.currency || "USD", orderId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!piRes.data.success) {
+          toast.error("Failed to initialize PayPal payment");
+          setCardStep(null);
+          return;
+        }
+        setClientSecret(piRes.data.clientSecret);
         setCurrentOrderId(orderId);
         setCardStep("paypal_form");
         return;
@@ -225,34 +237,6 @@ const Cart = () => {
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to place order");
     } finally {
-      setCheckingOut(false);
-    }
-  };
-
-  const handlePayPalSubmit = async (billingInfo) => {
-    if (!currentOrderId) return;
-    setCheckingOut(true);
-    try {
-      const sessionRes = await axios.post(
-        "/api/v1/payments/create-session",
-        {
-          paymentMethod: "paypal",
-          amount: total,
-          currency: store.currency || "USD",
-          orderId: currentOrderId,
-          items: cartItems.map((i) => ({ title: i.title, quantity: i.quantity, price: i.price })),
-          shippingInfo: { ...shippingInfo, ...billingInfo },
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (sessionRes.data.success && sessionRes.data.checkoutUrl) {
-        window.location.href = sessionRes.data.checkoutUrl;
-      } else {
-        toast.error("PayPal is not configured");
-        setCheckingOut(false);
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to initialize PayPal");
       setCheckingOut(false);
     }
   };
@@ -404,13 +388,17 @@ const Cart = () => {
                   />
                 </Elements>
               </div>
-            ) : cardStep === "paypal_form" ? (
+            ) : cardStep === "paypal_form" && clientSecret && stripePromise ? (
               <div className="p-4">
-                <PayPalForm
-                  total={total}
-                  currency={store.currency || "USD"}
-                  onSubmit={handlePayPalSubmit}
-                />
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <PayPalForm
+                    total={total}
+                    currency={store.currency || "USD"}
+                    clientSecret={clientSecret}
+                    orderId={currentOrderId}
+                    onSuccess={handleCardSuccess}
+                  />
+                </Elements>
               </div>
             ) : cardStep === "creating" ? (
               <div className="p-10 flex flex-col items-center justify-center space-y-4">
