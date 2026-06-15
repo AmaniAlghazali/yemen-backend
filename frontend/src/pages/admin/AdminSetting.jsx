@@ -328,6 +328,7 @@ const AdminSetting = () => {
                 </label>
                 <input
                   type="text"
+                  placeholder="Your full name"
                   value={profileData.name}
                   onChange={(e) =>
                     setProfileData({ ...profileData, name: e.target.value })
@@ -345,6 +346,7 @@ const AdminSetting = () => {
                 </label>
                 <input
                   type="email"
+                  placeholder="email@example.com"
                   value={profileData.email}
                   onChange={(e) =>
                     setProfileData({ ...profileData, email: e.target.value })
@@ -693,6 +695,7 @@ const AdminSetting = () => {
                 </label>
                 <input
                   type="text"
+                  placeholder="My Store"
                   value={storeConfig.storeName}
                   onChange={(e) =>
                     setStoreConfig({
@@ -740,6 +743,7 @@ const AdminSetting = () => {
                     min="0"
                     max="100"
                     step="0.1"
+                    placeholder="5"
                     value={storeConfig.taxRate}
                     onChange={(e) =>
                       setStoreConfig({

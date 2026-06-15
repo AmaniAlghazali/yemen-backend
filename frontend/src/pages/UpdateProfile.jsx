@@ -370,6 +370,7 @@ const UpdateProfile = () => {
                     </label>
                     <input
                       type="text"
+                      placeholder="Your full name"
                       value={profileData.name}
                       onChange={(e) =>
                         setProfileData({ ...profileData, name: e.target.value })
@@ -386,6 +387,7 @@ const UpdateProfile = () => {
                     </label>
                     <input
                       type="email"
+                      placeholder="email@example.com"
                       value={profileData.email}
                       onChange={(e) =>
                         setProfileData({ ...profileData, email: e.target.value })

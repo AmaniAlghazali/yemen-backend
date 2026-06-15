@@ -433,7 +433,7 @@ const Cart = () => {
                     <label className="label"><span className="label-text font-bold">ZIP Code</span></label>
                     <input type="text" required value={shippingInfo.zipCode}
                       onChange={e => setShippingInfo({ ...shippingInfo, zipCode: e.target.value })}
-                      className="input input-bordered rounded-xl" />
+                      className="input input-bordered rounded-xl" placeholder="12345" />
                   </div>
                   <div className="form-control">
                     <label className="label"><span className="label-text font-bold">Mobile No.</span></label>

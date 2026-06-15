@@ -619,6 +619,7 @@ const UserAdmin = () => {
                 <input
                   type="text"
                   required
+                  placeholder="User's full name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="input input-bordered w-full rounded-xl h-10 text-sm focus:outline-primary"
@@ -634,6 +635,7 @@ const UserAdmin = () => {
                 <input
                   type="email"
                   required
+                  placeholder="user@example.com"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                   className="input input-bordered w-full rounded-xl h-10 text-sm focus:outline-primary"

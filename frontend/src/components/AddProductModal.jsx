@@ -37,6 +37,7 @@ const AddProductModal = ({
             <input
               type="text"
               name="title"
+              placeholder="Product name"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -51,6 +52,7 @@ const AddProductModal = ({
             </label>
             <textarea
               name="description"
+              placeholder="Product description"
               value={formData.description}
               onChange={(e) =>
                 setFormData({
@@ -70,6 +72,7 @@ const AddProductModal = ({
               <input
                 type="number"
                 name="price"
+                placeholder="0.00"
                 value={formData.price}
                 onChange={(e) =>
                   setFormData({ ...formData, price: e.target.value })
@@ -85,6 +88,7 @@ const AddProductModal = ({
               <input
                 type="number"
                 name="stock"
+                placeholder="1"
                 value={formData.stock}
                 onChange={(e) =>
                   setFormData({ ...formData, stock: e.target.value })

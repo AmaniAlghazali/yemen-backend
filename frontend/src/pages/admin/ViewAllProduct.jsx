@@ -467,6 +467,7 @@ const ViewAllProduct = () => {
                 <input
                   type="text"
                   name="title"
+                  placeholder="Product name"
                   value={productFormData.title}
                   onChange={handleProductInputChange}
                   className="input input-bordered w-full rounded-xl"
@@ -481,6 +482,7 @@ const ViewAllProduct = () => {
                 </label>
                 <textarea
                   name="description"
+                  placeholder="Product description"
                   value={productFormData.description}
                   onChange={handleProductInputChange}
                   className="textarea textarea-bordered w-full rounded-xl"
@@ -497,6 +499,7 @@ const ViewAllProduct = () => {
                   <input
                     type="number"
                     name="price"
+                    placeholder="0.00"
                     value={productFormData.price}
                     onChange={handleProductInputChange}
                     className="input input-bordered w-full rounded-xl"
@@ -512,6 +515,7 @@ const ViewAllProduct = () => {
                   <input
                     type="number"
                     name="stock"
+                    placeholder="1"
                     value={productFormData.stock}
                     onChange={handleProductInputChange}
                     className="input input-bordered w-full rounded-xl"

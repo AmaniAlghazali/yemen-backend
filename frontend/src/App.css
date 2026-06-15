@@ -2,3 +2,12 @@
 
 /* This is where DaisyUI belongs in v4 */
 @plugin "daisyui";
+
+/* Make all placeholders clearly visible */
+.input::placeholder,
+.textarea::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
+}
