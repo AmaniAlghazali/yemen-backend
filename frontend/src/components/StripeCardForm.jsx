@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import {
   CardNumberElement,
   CardExpiryElement,
@@ -63,7 +64,20 @@ const StripeCardForm = ({ total, currency, clientSecret, orderId, onSuccess }) =
     }
 
     if (paymentIntent.status === "succeeded") {
-      toast.success("Payment successful!");
+      if (saveCard) {
+        try {
+          await axios.post(
+            "/api/v1/payments/save-payment-method",
+            { paymentMethodId: paymentIntent.payment_method },
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } },
+          );
+          toast.success("Card saved for future payments!");
+        } catch {
+          toast.warn("Payment succeeded, but could not save card");
+        }
+      } else {
+        toast.success("Payment successful!");
+      }
       onSuccess(paymentIntent.id);
     }
   };

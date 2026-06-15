@@ -19,7 +19,7 @@ function toStripeAmount(amount, currency) {
 
 export const createPaymentIntent = async (req, res) => {
   try {
-    const { amount, currency, orderId } = req.body;
+    const { amount, currency, orderId, saveCard } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -28,12 +28,34 @@ export const createPaymentIntent = async (req, res) => {
       });
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
+    const intentOptions = {
       amount: toStripeAmount(amount, currency),
       currency: "usd",
       payment_method_types: ["card"],
       metadata: { userId: req.user.id, orderId: orderId || "" },
-    });
+    };
+
+    if (saveCard) {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      });
+      if (user?.email) {
+        const customers = await stripe.customers.list({
+          email: user.email,
+          limit: 1,
+        });
+        const customer = customers.data[0] ||
+          await stripe.customers.create({
+            email: user.email,
+            name: user.name,
+            metadata: { userId: req.user.id },
+          });
+        intentOptions.customer = customer.id;
+        intentOptions.setup_future_usage = "off_session";
+      }
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create(intentOptions);
 
     res.status(200).json({
       success: true,
@@ -45,6 +67,39 @@ export const createPaymentIntent = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+export const savePaymentMethod = async (req, res) => {
+  try {
+    const { paymentMethodId } = req.body;
+    if (!paymentMethodId) {
+      return res.status(400).json({ success: false, message: "Missing paymentMethodId" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user?.email) {
+      return res.status(400).json({ success: false, message: "User email not found" });
+    }
+
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    let customer = customers.data[0];
+    if (!customer) {
+      customer = await stripe.customers.create({
+        email: user.email,
+        name: user.name,
+        metadata: { userId: req.user.id },
+      });
+    }
+
+    await stripe.paymentMethods.attach(paymentMethodId, { customer: customer.id });
+    await stripe.customers.update(customer.id, {
+      invoice_settings: { default_payment_method: paymentMethodId },
+    });
+
+    res.json({ success: true, message: "Card saved for future payments" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

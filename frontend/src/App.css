@@ -11,3 +11,11 @@ textarea::placeholder {
   color: #6b7280 !important;
   opacity: 1 !important;
 }
+
+/* Make all labels clearly visible */
+label,
+.label-text,
+.label span {
+  color: #374151 !important;
+  opacity: 1 !important;
+}
